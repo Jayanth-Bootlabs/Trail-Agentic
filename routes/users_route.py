@@ -1,15 +1,14 @@
 import traceback
-from fastapi import APIRouter, Request
-from service.users_service import create_user_service, get_users_service, get_user_service, update_user_service, delete_user_service
+from fastapi import APIRouter
+from services.users_service import create_user_service, get_users_service, get_user_service, update_user_service, delete_user_service, login_user_service
 from utils.logger import log_event
 from utils.response import format_response
-from schemas.user_schema import CreateUserRequest, UpdateUserRequest
+from schemas.user_schema import CreateUserRequest, UpdateUserRequest, LoginRequest
 from fastapi import HTTPException
 
 router = APIRouter(tags=["Users"])
 
 SERVICE_NAME = "user_routes"
-
 
 @router.post("/create_users")
 async def create_user(payload: CreateUserRequest):
@@ -43,6 +42,37 @@ async def create_user(payload: CreateUserRequest):
         )
         raise HTTPException(status_code=500, detail="Internal server error")
 
+@router.post("/login")
+async def login_user(payload: LoginRequest):
+    log_event(
+        level="INFO",
+        service=SERVICE_NAME,
+        function="login_user",
+        message="Login API called",
+        metadata={"email": payload.email},
+    )
+
+    try:
+        data = await login_user_service(payload)
+
+        return format_response(
+            data=data,
+            message="Login successful",
+            status_code=200,
+        )
+
+    except HTTPException:
+        raise
+
+    except Exception:
+        log_event(
+            level="ERROR",
+            service=SERVICE_NAME,
+            function="login_user",
+            message="Login failed",
+            stack_trace=traceback.format_exc(),
+        )
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 @router.get("/get_all_users")
 async def get_users():
