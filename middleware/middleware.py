@@ -1,7 +1,7 @@
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import JSONResponse
-from models.users import Users
+from models.users_model import Users
 from utils.logger import log_event
 
 SERVICE_NAME = "user_middleware"

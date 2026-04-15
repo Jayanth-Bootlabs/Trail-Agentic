@@ -3,7 +3,6 @@ import logging
 import os
 from datetime import datetime
 from zoneinfo import ZoneInfo
-
 from dotenv import load_dotenv
 
 load_dotenv(override=True)

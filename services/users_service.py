@@ -1,5 +1,5 @@
 import traceback
-from models.users import Users
+from models.users_model import Users
 from utils.logger import log_event
 from fastapi import HTTPException
 from schemas.user_schema import CreateUserRequest, UpdateUserRequest, LoginRequest
