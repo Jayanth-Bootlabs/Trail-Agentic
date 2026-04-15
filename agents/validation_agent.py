@@ -24,6 +24,6 @@ Behavior rules:
 
     llm=llm,
     verbose=True,
-    max_iter=5,
+    max_iter=3,
     allow_delegation=False,
 )

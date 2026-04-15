@@ -29,12 +29,32 @@ async def validate_prompt(payload: PromptRequest, request: Request):
             status_code=200,
         )
 
+    except ValueError as ve:
+        log_event(
+            level="ERROR",
+            service=SERVICE_NAME,
+            function="validate_prompt",
+            message=str(ve),
+            stack_trace=traceback.format_exc(),
+        )
+
+        return format_response(
+            data={},
+            message=str(ve),
+            status_code=400,
+        )
+
     except Exception:
         log_event(
             level="ERROR",
             service=SERVICE_NAME,
             function="validate_prompt",
-            message="Validation failed",
+            message="Unexpected error",
             stack_trace=traceback.format_exc(),
         )
-        raise
+
+        return format_response(
+            data={},
+            message="Internal server error",
+            status_code=500,
+        )

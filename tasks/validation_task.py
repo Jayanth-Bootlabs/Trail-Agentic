@@ -33,8 +33,7 @@ FINAL JSON FORMAT:
   "type": "final",
   "project": "",
   "requirements": [],
-  "assumptions": [],
-  "clarifications": []
+  "assumptions": []
 }}
 
 IMPORTANT:
