@@ -9,8 +9,7 @@ SERVICE_NAME = "user_middleware"
 class UserTypeMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         try:
-            # user_email = request.headers.get("Authorization")
-            user_email = "shreyesh.swargam@bootlabstech.com"
+            user_email = request.headers.get("Authorization")
 
             if not user_email:
                 return JSONResponse(

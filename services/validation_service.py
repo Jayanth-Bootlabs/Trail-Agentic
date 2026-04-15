@@ -20,10 +20,8 @@ async def validate_prompt_service(payload, request: Request):
 
         user_id = user.id
 
-        # Create task
         task = get_validation_task(user_input)
 
-        # Run crew
         crew = Crew(
             agents=[validation_agent],
             tasks=[task],
@@ -34,7 +32,6 @@ async def validate_prompt_service(payload, request: Request):
 
         raw_output = crew_output.raw if hasattr(crew_output, "raw") else str(crew_output)
 
-        # CLEAN + PARSE
         parsed_output = clean_ai_response(raw_output)
 
         is_completed = isinstance(parsed_output, dict)
