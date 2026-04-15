@@ -18,15 +18,12 @@ def clean_ai_response(raw: str):
     if not raw:
         return None
 
-    # Remove markdown code blocks safely
     cleaned = re.sub(r"```(?:json)?", "", raw)
     cleaned = cleaned.replace("```", "").strip()
 
-    # Try parsing JSON first (BEST CASE)
     try:
         return json.loads(cleaned)
     except Exception:
         pass
 
-    # Fallback: return cleaned string
     return cleaned
