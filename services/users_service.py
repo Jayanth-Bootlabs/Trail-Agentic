@@ -2,7 +2,8 @@ import traceback
 from models.users import Users
 from utils.logger import log_event
 from fastapi import HTTPException
-from schemas.user_schema import CreateUserRequest, UpdateUserRequest
+from schemas.user_schema import CreateUserRequest, UpdateUserRequest, LoginRequest
+from utils.helper import hash_password, verify_password
 
 SERVICE_NAME = "user_service"
 
@@ -14,17 +15,17 @@ async def create_user_service(payload: CreateUserRequest):
                 detail="Only @bootlabstech.com emails are allowed",
             )
 
-        existing_user = (
-            await Users.filter(email=payload.email)
-            .first()
-        )
+        existing_user = await Users.filter(email=payload.email).first()
 
         if existing_user:
             raise HTTPException(status_code=400, detail="User already exists")
 
+        hashed_password = hash_password(payload.password)
+
         user = await Users.create(
             email=payload.email,
             name=payload.name,
+            password=hashed_password,
         )
 
         return {
@@ -42,6 +43,35 @@ async def create_user_service(payload: CreateUserRequest):
             service=SERVICE_NAME,
             function="create_user_service",
             message="Error creating user",
+            stack_trace=traceback.format_exc(),
+        )
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+async def login_user_service(payload: LoginRequest):
+    try:
+        user = await Users.filter(email=payload.email).first()
+
+        if not user:
+            raise HTTPException(status_code=400, detail="Invalid credentials")
+
+        if not verify_password(payload.password, user.password):
+            raise HTTPException(status_code=400, detail="Invalid credentials")
+
+        return {
+            "id": user.id,
+            "email": user.email,
+            "name": user.name,
+        }
+
+    except HTTPException:
+        raise
+
+    except Exception:
+        log_event(
+            level="ERROR",
+            service=SERVICE_NAME,
+            function="login_user_service",
+            message="Error during login",
             stack_trace=traceback.format_exc(),
         )
         raise HTTPException(status_code=500, detail="Internal server error")

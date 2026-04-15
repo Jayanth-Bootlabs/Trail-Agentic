@@ -1,8 +1,6 @@
 from typing import Any
-
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
-
 
 def format_response(
     data: Any | None = None,

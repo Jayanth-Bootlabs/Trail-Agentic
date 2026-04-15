@@ -28,7 +28,7 @@ def init_db(app):
     register_tortoise(
         app=app,
         db_url=DATABASE_URL,
-        modules={"models": ["models.users"]},
+        modules={"models": ["models.users", "models.prompt_session"]},
         generate_schemas=True,
         add_exception_handlers=True,
     )
