@@ -10,7 +10,6 @@ from utils.helper import clean_ai_response
 
 SERVICE_NAME = "validation_service"
 
-
 async def validate_prompt_service(payload, request: Request):
     try:
         user_input = payload.input
@@ -28,22 +27,51 @@ async def validate_prompt_service(payload, request: Request):
         )
 
         crew_output = crew.kickoff()
+
         raw_output = crew_output.raw if hasattr(crew_output, "raw") else str(crew_output)
 
         cleaned_output = clean_ai_response(raw_output)
+
+        ui_response = cleaned_output if cleaned_output else {
+            "status": "error",
+            "message": "Failed to parse AI response"
+        }
+
+        is_completed = False
+        if isinstance(cleaned_output, dict):
+            is_completed = cleaned_output.get("status") == "final"
 
         session = await PromptSession.create(
             user=user,
             user_input=user_input,
             ai_response=raw_output,
-            is_completed=True
+            is_completed=is_completed
         )
 
-        return {
-            "session_id": session.id,
-            "response": cleaned_output,
-            "is_completed": True
-        }
+        if isinstance(ui_response, dict):
+            if is_completed:
+                response_payload = {
+                    "session_id": session.id,
+                    "project": ui_response.get("project", ""),
+                    "message": ui_response.get("message"),
+                    "is_completed": is_completed,
+                    "requirements": ui_response.get("requirements", []),
+                    "assumptions": ui_response.get("assumptions", [])
+                }
+            else:
+                response_payload = {
+                    "session_id": session.id,
+                    "message": ui_response.get("message"),
+                    "is_completed": is_completed
+                }
+        else:
+            response_payload = {
+                "session_id": session.id,
+                "message": str(ui_response),
+                "is_completed": is_completed
+            }
+
+        return response_payload
 
     except Exception:
         log_event(
