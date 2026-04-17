@@ -67,4 +67,8 @@ async def generate_requirement_spec(session_id: int):
             message="Requirement generation failed",
             stack_trace=traceback.format_exc(),
         )
+        if "requirement_record" in locals():
+            requirement_record.status = "FAILED"
+            await requirement_record.save()
+
         raise

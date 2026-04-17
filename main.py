@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 from database.connection import init_db
 from middleware.middleware import UserTypeMiddleware
-from routes import users_route, validation_routes, requirement_routes
+from routes import users_route, validation_routes, requirement_routes, code_routes
 
 load_dotenv(override=True)
 
@@ -42,3 +42,4 @@ async def health_check():
 app.include_router(users_route.router)
 app.include_router(validation_routes.router)
 app.include_router(requirement_routes.router)
+app.include_router(code_routes.router)
