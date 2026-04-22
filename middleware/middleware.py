@@ -6,9 +6,21 @@ from utils.logger import log_event
 
 SERVICE_NAME = "user_middleware"
 
+EXCLUDED_PATHS = [
+    "/docs",
+    "/openapi.json",
+    "/redoc",
+    "/create_users",
+    "/login",
+    "/health",
+]
+
 class UserTypeMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         try:
+            if request.url.path in EXCLUDED_PATHS:
+                return await call_next(request)
+
             user_email = request.headers.get("Authorization")
 
             if not user_email:

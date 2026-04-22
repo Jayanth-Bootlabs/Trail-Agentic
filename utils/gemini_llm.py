@@ -22,3 +22,17 @@ class GeminiLLM(BaseLLM):
             return response["choices"][0]["message"]["content"]
         except Exception as e:
             return f"Error: {str(e)}"
+
+    def invoke(self, prompt: str):
+        try:
+            response = completion(
+                model=f"gemini/{model_name}",
+                api_key=api_key,
+                messages=[{"role": "user", "content": prompt}]
+            )
+            return response["choices"][0]["message"]["content"]
+        except Exception as e:
+            return f"Error: {str(e)}"
+
+    def __call__(self, prompt: str):
+        return self.invoke(prompt)
