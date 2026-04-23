@@ -6,21 +6,6 @@ from prompts.validation_prompt import get_validation_prompt
 
 SERVICE_NAME = "graph_nodes"
 
-
-async def start_node(state: GraphState) -> GraphState:
-    log_event(
-        level="INFO",
-        service=SERVICE_NAME,
-        function="start_node",
-        message="Graph execution started",
-    )
-
-    return {
-        **state,
-        "status": "processing"
-    }
-
-
 async def llm_node(state: GraphState) -> GraphState:
     try:
         log_event(
@@ -35,7 +20,7 @@ async def llm_node(state: GraphState) -> GraphState:
         response = await llm.generate(prompt)
 
         clean_response = response.strip()
-
+ 
         if clean_response.startswith("```json"):
             clean_response = clean_response[7:]
         if clean_response.startswith("```"):
@@ -71,17 +56,3 @@ async def llm_node(state: GraphState) -> GraphState:
             "ai_response": "Something went wrong while processing your request",
             "status": "failed"
         }
-
-
-async def end_node(state: GraphState) -> GraphState:
-    log_event(
-        level="INFO",
-        service=SERVICE_NAME,
-        function="end_node",
-        message="Graph execution completed",
-    )
-
-    return {
-        **state,
-        "status": state.get("status", "completed")
-    }
