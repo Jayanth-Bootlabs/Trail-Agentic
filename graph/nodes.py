@@ -19,17 +19,6 @@ async def llm_node(state: GraphState) -> GraphState:
 
         response = await llm.generate(prompt)
 
-        clean_response = response.strip()
- 
-        if clean_response.startswith("```json"):
-            clean_response = clean_response[7:]
-        if clean_response.startswith("```"):
-            clean_response = clean_response[3:]
-        if clean_response.endswith("```"):
-            clean_response = clean_response[:-3]
-
-        clean_response = clean_response.strip()
-
         log_event(
             level="INFO",
             service=SERVICE_NAME,
@@ -39,7 +28,7 @@ async def llm_node(state: GraphState) -> GraphState:
 
         return {
             **state,
-            "ai_response": clean_response
+            "ai_response": response
         }
 
     except Exception:
