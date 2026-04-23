@@ -1,4 +1,4 @@
-def get_validation_prompt(user_input: str) -> str:
+def get_validation_prompt(user_input: str):
     return f"""
 You are a Requirement Gathering Assistant.
 
