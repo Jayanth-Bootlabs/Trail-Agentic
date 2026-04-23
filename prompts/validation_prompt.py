@@ -1,47 +1,64 @@
+VALIDATION_RULES = {
+    "min_required": 2,
+    "dimensions": """
+1. Platform (web, mobile, backend)
+2. Domain (finance, CRM, chatbot, e-commerce)
+3. Functionality (track expenses, manage users, reports)
+4. Technology (python, AI, react)
+""",
+    "invalid_examples": """
+- build app
+- create system
+- create web app
+""",
+    "valid_examples": """
+- create web app for expense tracking
+- build AI chatbot using python
+- create CRM system for sales team
+"""
+}
+
+
 def get_validation_prompt(user_input: str):
     return f"""
-You are a Requirement Gathering Assistant.
+You are a Requirement Validation Agent.
+
+Your job is ONLY to decide:
+- Is the input clear enough to proceed?
+- OR do we need ONE clarification?
 
 USER INPUT:
 {user_input}
 
-You must ALWAYS return valid JSON:
+STRICT OUTPUT (JSON ONLY):
 
 {{
-  "status": "question" or "final",
-  "message": "",
-  "project": "",
-  "requirements": [],
-  "assumptions": []
+  "status": "question" or "valid",
+  "message": ""
 }}
 
-CRITICAL BEHAVIOR RULE:
+CRITICAL RULES:
+- Do NOT generate requirements
+- Do NOT assume missing details
+- Do NOT expand the idea
 
-You are NOT allowed to keep asking questions repeatedly.
+DECISION LOGIC:
 
-DECISION RULE:
+Input is VALID only if it contains at least {VALIDATION_RULES["min_required"]} of the following:
 
-1. Ask a question ONLY if:
-   - user input is extremely vague (example: "build app", "make system")
+{VALIDATION_RULES["dimensions"]}
 
-2. Otherwise ALWAYS assume missing details and go FINAL.
+Examples:
 
-3. If user already provided ANY of these:
-   - project type (app/system/web)
-   - domain (money tracker, CRM, etc.)
-   - platform (web/mobile)
-   - user context (personal/business)
+INVALID:
+{VALIDATION_RULES["invalid_examples"]}
 
-   THEN you MUST go FINAL immediately
+VALID:
+{VALIDATION_RULES["valid_examples"]}
 
-4. Maximum only 1 clarification step in entire conversation.
+OUTPUT RULES:
 
-5. NEVER ask follow-up questions after user gives 2+ meaningful details.
-
-OUTPUT RULE:
-- If question → ONLY 1 question in message
-- If final → complete structured JSON
-
-IMPORTANT:
-Return ONLY valid JSON. No explanation. No extra text.
+- If INVALID → ask ONLY 1 clear question
+- If VALID → message must be empty
+- Return ONLY JSON
 """
