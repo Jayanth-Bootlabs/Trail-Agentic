@@ -42,6 +42,6 @@ async def llm_node(state: GraphState) -> GraphState:
 
         return {
             **state,
-            "ai_response": None,
+            "ai_response": "Something went wrong while processing your request",
             "status": "failed"
         }
