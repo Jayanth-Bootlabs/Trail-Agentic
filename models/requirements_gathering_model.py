@@ -7,9 +7,8 @@ class RequirementSession(models.Model):
         related_name="requirements",
         on_delete=fields.CASCADE
     )
-    validated_output = fields.JSONField()
-    requirement_spec = fields.TextField()
-    status = fields.CharField(max_length=50, default="PENDING")
+    requirement_spec = fields.JSONField()
+    is_completed = fields.BooleanField(default=False)
     created_at = fields.DatetimeField(auto_now_add=True)
 
     class Meta:

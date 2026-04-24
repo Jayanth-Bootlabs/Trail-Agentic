@@ -3,7 +3,7 @@ from fastapi import Request, HTTPException
 from models.prompt_validator_model import PromptSession
 from utils.logger import log_event
 from utils.helper import clean_ai_response
-from graph.graph_builder import build_graph
+from graph.graph_builder import build_validation_graph
 
 SERVICE_NAME = "validation_service"
 
@@ -24,7 +24,7 @@ async def run_prompt_service(payload, request: Request):
         )
 
         # 1. Build graph
-        graph = build_graph()
+        graph = build_validation_graph()
 
         # 2. Initial state
         state = {

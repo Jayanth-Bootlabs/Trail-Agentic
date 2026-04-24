@@ -10,7 +10,7 @@ router = APIRouter(tags=["Prompt"])
 SERVICE_NAME = "prompt_routes"
 
 
-@router.post("/create_prompt")
+@router.post("/prompt_validator")
 async def create_prompt(payload: PromptRequest, request: Request):
     log_event(
         level="INFO",
