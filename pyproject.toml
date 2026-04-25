@@ -5,6 +5,7 @@ description = ""
 authors = [
     {name = "ShreyeshSwargam98",email = "shreyesh.swargam@bootlabstech.com"}
 ]
+
 readme = "README.md"
 requires-python = ">=3.12,<3.14"
 dependencies = [
@@ -24,9 +25,9 @@ dependencies = [
     "bcrypt (==4.0.1)",
 ]
 
-[tool.poetry]
-packages = [{include = "crewai_recipe", from = "src"}]
 
+[tool.poetry]
+package-mode = false
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
