@@ -29,7 +29,8 @@ def init_db(app):
         app=app,
         db_url=DATABASE_URL,
         modules={"models": ["models.users_model", "models.prompt_validator_model", 
-                            "models.requirements_gathering_model", "models.code_generator_model"]},
+                            "models.requirements_gathering_model", "models.code_generator_model",
+                            "models.documentation_model","models.insights_model"]},
         generate_schemas=True,
         add_exception_handlers=True,
     )
