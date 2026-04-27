@@ -1,6 +1,6 @@
-from typing import TypedDict, Optional, Dict, Any
+from typing import TypedDict
 
 class GraphState(TypedDict, total=False):
     user_input: str
-    ai_response: Optional[str]
+    ai_response: dict
     status: str
