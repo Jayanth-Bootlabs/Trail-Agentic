@@ -11,7 +11,6 @@ class RequirementSession(models.Model):
     user_input = fields.TextField()
     combined_input = fields.TextField(null=True)
     status = fields.CharField(max_length=50, default="in_progress")
-    question = fields.TextField(null=True)
     ai_response = fields.JSONField(null=True)
     is_completed = fields.BooleanField(default=False)
     created_at = fields.DatetimeField(auto_now_add=True)

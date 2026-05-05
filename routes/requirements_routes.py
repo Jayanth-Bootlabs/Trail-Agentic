@@ -2,11 +2,9 @@ import traceback
 from fastapi import APIRouter, HTTPException
 from schemas.requirements_schema import (
     StartRequirementRequest,
-    ContinueRequirementRequest
 )
 from services.requirements_service import (
     start_requirements_request,
-    continue_requirements_request
 )
 from utils.logger import log_event
 from utils.response import format_response
@@ -46,41 +44,6 @@ async def start_requirements(payload: StartRequirementRequest):
             service=SERVICE_NAME,
             function="start_requirements",
             message="Requirements start failed",
-            stack_trace=traceback.format_exc(),
-        )
-        raise HTTPException(status_code=500, detail="Internal server error")
-
-
-@router.post("/continue_requirements")
-async def continue_requirements(payload: ContinueRequirementRequest):
-    log_event(
-        level="INFO",
-        service=SERVICE_NAME,
-        function="continue_requirements",
-        message="Requirements continue API called",
-        metadata={
-            "requirement_session_id": payload.requirement_session_id
-        },
-    )
-
-    try:
-        data = await continue_requirements_request(payload)
-
-        return format_response(
-            data=data,
-            message="Requirements continued successfully",
-            status_code=200,
-        )
-
-    except HTTPException:
-        raise
-
-    except Exception:
-        log_event(
-            level="ERROR",
-            service=SERVICE_NAME,
-            function="continue_requirements",
-            message="Requirements continue failed",
             stack_trace=traceback.format_exc(),
         )
         raise HTTPException(status_code=500, detail="Internal server error")
