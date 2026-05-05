@@ -22,7 +22,7 @@ class UserTypeMiddleware(BaseHTTPMiddleware):
                 return await call_next(request)
 
             user_email = request.headers.get("Authorization")
-
+            
             if not user_email:
                 return JSONResponse(
                     status_code=401,

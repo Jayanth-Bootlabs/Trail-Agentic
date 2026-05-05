@@ -7,118 +7,84 @@ from services.validation_rules import run_rule_validation
 
 SERVICE_NAME = "validation_service"
 
-async def validate_prompt_request(payload):
+
+async def validate_prompt_request(payload, user):
     try:
+        user_input = payload.user_input
+
         log_event(
             level="INFO",
             service=SERVICE_NAME,
             function="validate_prompt_request",
             message="Starting prompt validation",
-            metadata={"user_input": payload.user_input},
+            metadata={"user_id": user.id, "user_input": user_input},
         )
 
-        user_input = payload.user_input
-
-        # Step 1 Rule Engine
         rule_result = run_rule_validation(user_input)
 
         if rule_result:
-            log_event(
-                level="INFO",
-                service=SERVICE_NAME,
-                function="validate_prompt_request",
-                message="Resolved by rule engine",
-                metadata=rule_result,
-            )
-
-            session = await ValidationSession.create(
-                user_input=user_input,
-                combined_input=user_input,
-                status=rule_result["status"],
-                ai_response=rule_result,
-                is_completed=(rule_result["status"] == "valid")
-            )
-
-            return {
-                "session_id": session.id,
-                **rule_result
-            }
-
-        # Step 2 LLM Validation
-        log_event(
-            level="INFO",
-            service=SERVICE_NAME,
-            function="validate_prompt_request",
-            message="Escalating request to LLM",
-            metadata={"user_input": user_input},
-        )
-
-        graph = build_validation_graph()
-
-        result = await graph.ainvoke({
-            "user_input": user_input
-        })
-
-        ai = result["ai_response"]
-        ai["source"] = "llm"
-
-        log_event(
-            level="INFO",
-            service=SERVICE_NAME,
-            function="validate_prompt_request",
-            message="LLM validation completed",
-            metadata=ai,
-        )
+            ai = rule_result
+            
+        else:
+            graph = build_validation_graph()
+            result = await graph.ainvoke({"user_input": user_input})
+            ai = result["ai_response"]
+            ai["source"] = "llm"
 
         session = await ValidationSession.create(
+            user=user,
             user_input=user_input,
             combined_input=user_input,
             status=ai["status"],
             ai_response=ai,
-            is_completed=(ai["status"] == "valid")
+            is_completed=(ai["status"] == "valid"),
+        )
+
+        log_event(
+            level="INFO",
+            service=SERVICE_NAME,
+            function="validate_prompt_request",
+            message="Validation session created",
+            metadata={"session_id": session.id, "status": ai["status"]},
         )
 
         return {
             "session_id": session.id,
-            **ai
+            "status": ai["status"],
+            "message": ai.get("message"),
         }
 
-    except Exception as e:
+    except Exception:
         log_event(
             level="ERROR",
             service=SERVICE_NAME,
             function="validate_prompt_request",
-            message="Prompt validation failed",
-            metadata={
-                "error": str(e),
-                "user_input": getattr(payload, "user_input", None)
-            },
+            message="Validation crashed",
+            stack_trace=traceback.format_exc(),
         )
-
-        return {
-            "status": "error",
-            "message": "Something went wrong while validating your request. Please try again."
-        }
+        raise
 
 
-async def continue_prompt_request(payload):
+async def continue_prompt_request(payload, user):
     try:
         log_event(
             level="INFO",
             service=SERVICE_NAME,
             function="continue_prompt_request",
-            message="Continuing prompt validation",
-            metadata={"session_id": payload.session_id},
+            message="Continuing validation",
+            metadata={"user_id": user.id, "session_id": payload.session_id},
         )
 
-        session = await ValidationSession.get(id=payload.session_id)
+        session = await ValidationSession.get_or_none(
+            id=payload.session_id,
+            user=user
+        )
+
+        if not session:
+            raise HTTPException(status_code=404, detail="Session not found")
 
         graph = build_validation_graph()
-
-        result = await graph.ainvoke({
-            "user_input": payload.user_reply
-        })
-
+        result = await graph.ainvoke({"user_input": payload.user_reply})
         ai = result["ai_response"]
 
         session.combined_input = payload.user_reply
@@ -132,28 +98,21 @@ async def continue_prompt_request(payload):
             level="INFO",
             service=SERVICE_NAME,
             function="continue_prompt_request",
-            message="Prompt validation continued successfully",
-            metadata={
-                "session_id": session.id,
-                "status": ai["status"]
-            },
+            message="Session updated after user reply",
+            metadata={"session_id": session.id, "status": ai["status"]},
         )
 
         return {
             "session_id": session.id,
             "status": ai["status"],
-            "user_input": payload.user_reply
         }
-
-    except HTTPException:
-        raise
 
     except Exception:
         log_event(
             level="ERROR",
             service=SERVICE_NAME,
             function="continue_prompt_request",
-            message="Continue prompt validation failed",
+            message="Continue validation crashed",
             stack_trace=traceback.format_exc(),
         )
-        raise HTTPException(status_code=500, detail="Internal server error")
+        raise
