@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 from database.connection import init_db
 from middleware.middleware import UserTypeMiddleware
-from routes import user_routes,validation_routes,code_routes,unit_test_routes,insights_routes,documentation_routes
+from routes import user_routes,validation_routes,code_routes,unit_test_routes,insights_routes,documentation_routes, requirements_routes, coding_routes
 
 load_dotenv(override=True)
 
@@ -45,3 +45,5 @@ app.include_router(code_routes.router)
 app.include_router(unit_test_routes.router)
 app.include_router(insights_routes.router)
 app.include_router(documentation_routes.router)
+app.include_router(requirements_routes.router)
+app.include_router(coding_routes.router)
