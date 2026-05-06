@@ -3,15 +3,17 @@ from typing import List, Optional
 
 
 class GenerateInsightsRequest(BaseModel):
-    user_id: int
-    session_id: int
+    unit_test_id: int
+
+
+class FetchInsightsRequest(BaseModel):
+    insights_id: int
 
 
 class InsightsResponse(BaseModel):
     insight_id: int
-    user_id: int
-    session_id: int
-    
+    unit_test_id: int
+
     insights_summary: str
     key_insights: List[str]
     missing_implementations: List[str]

@@ -3,10 +3,7 @@ from tortoise import fields, models
 class RequirementSession(models.Model):
     id = fields.IntField(pk=True)
 
-    validation_session = fields.ForeignKeyField(
-        "models.ValidationSession",
-        related_name="requirements"
-    )
+    validation_session = fields.ForeignKeyField("models.ValidationSession",related_name="requirements")
 
     user_input = fields.TextField()
     combined_input = fields.TextField(null=True)

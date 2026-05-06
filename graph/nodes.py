@@ -5,8 +5,6 @@ from utils.gemini_llm import llm
 from utils.logger import log_event
 from utils.helper import clean_ai_response
 from prompts.requirements_prompt import get_requirements_prompt
-from prompts.coding_prompt import get_coding_prompt
-
 from prompts.code_prompt import get_code_prompt
 from prompts.unit_test_prompt import get_unit_tests_prompt
 from prompts.insights_prompt import get_insights_prompt

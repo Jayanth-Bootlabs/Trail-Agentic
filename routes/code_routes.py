@@ -1,17 +1,13 @@
+from fastapi import APIRouter, Request, HTTPException
 import traceback
-from fastapi import APIRouter, HTTPException, Request
+
 from schemas.code_schema import CodeGenerationRequest
-from services.code_service import generate_code_service
+from services.code_service import generate_code_service, get_generated_code_service
 from utils.logger import log_event
 from utils.response import format_response
-from services.code_service import generate_code_service, get_generated_code_service
 
-from schemas.code_schema import CodeGenerationRequest
-
-
-router = APIRouter(tags=["Code Generation"])
-
-SERVICE_NAME = "code_generation_routes"
+router = APIRouter(tags=["Coding"])
+SERVICE_NAME = "code_routes"
 
 
 @router.post("/generate-code")
@@ -21,17 +17,11 @@ async def generate_code(request: Request, payload: CodeGenerationRequest):
         service=SERVICE_NAME,
         function="generate_code",
         message="Generate code API called",
-        metadata={
-            "user_id": request.state.user.id,
-            "session_id": payload.session_id
-        },
+        metadata={"requirements_id": payload.requirements_id},
     )
 
     try:
-        data = await generate_code_service(
-            user_id=request.state.user.id,
-            session_id=payload.session_id
-        )
+        data = await generate_code_service(payload)
 
         return format_response(
             data=data,
@@ -54,39 +44,27 @@ async def generate_code(request: Request, payload: CodeGenerationRequest):
 
 
 @router.get("/get-code")
-async def get_code(request: Request, session_id: int):
+async def get_code(request: Request, code_id: int):
     log_event(
         level="INFO",
         service=SERVICE_NAME,
         function="get_code",
-        message="Get code API called",
-        metadata={
-            "user_id": request.state.user.id,
-            "session_id": session_id
-        },
+        message="Fetch code API called",
+        metadata={"code_id": code_id},
     )
 
     try:
-        data = await get_generated_code_service(
-            user_id=request.state.user.id,
-            session_id=session_id
-        )
-
-        return format_response(
-            data=data,
-            message="Code fetched successfully",
-            status_code=200,
-        )
+        data = await get_generated_code_service(code_id)
+        return format_response(data=data, message="Code fetched successfully", status_code=200)
 
     except HTTPException:
         raise
 
     except Exception:
         log_event(
-            level="ERROR",
-            service=SERVICE_NAME,
+            level="ERROR", 
+            service=SERVICE_NAME, 
             function="get_code",
-            message="Get code failed",
-            stack_trace=traceback.format_exc(),
-        )
+            message="Fetch code failed", 
+            stack_trace=traceback.format_exc())
         raise HTTPException(status_code=500, detail="Internal server error")

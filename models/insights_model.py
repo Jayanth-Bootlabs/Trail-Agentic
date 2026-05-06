@@ -1,13 +1,9 @@
+#insights_model.py
+
 from tortoise import fields, models
 
 class Insights(models.Model):
     id = fields.IntField(pk=True)
-
-    user = fields.ForeignKeyField("models.Users", related_name="insights", on_delete=fields.CASCADE)
-
-    session = fields.ForeignKeyField("models.ValidationSession",related_name="insights",on_delete=fields.CASCADE)
-
-    code = fields.ForeignKeyField("models.GeneratedCode",related_name="insights",on_delete=fields.CASCADE)
 
     tests = fields.ForeignKeyField("models.UnitTests",related_name="insights",on_delete=fields.CASCADE)
 
@@ -22,6 +18,7 @@ class Insights(models.Model):
     recommendations = fields.JSONField(default=list)
 
     created_at = fields.DatetimeField(auto_now_add=True)
+    is_completed = fields.BooleanField(default=False)
 
     class Meta:
         table = "insights"

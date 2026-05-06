@@ -1,12 +1,11 @@
 import traceback
 from fastapi import APIRouter, HTTPException
 from schemas.unit_test_schema import UnitTestRequest
-from services.unit_test_service import generate_unit_tests_service,get_unit_tests_service
+from services.unit_test_service import generate_unit_tests_service, get_unit_tests_service
 from utils.logger import log_event
 from utils.response import format_response
 
 router = APIRouter(tags=["Unit Tests"])
-
 SERVICE_NAME = "unit_tests_routes"
 
 
@@ -17,10 +16,7 @@ async def generate_unit_tests(payload: UnitTestRequest):
         service=SERVICE_NAME,
         function="generate_unit_tests",
         message="Generate unit tests API called",
-        metadata={
-    "user_id": payload.user_id,
-    "session_id": payload.session_id
-},
+        metadata={"code_id": payload.code_id},
     )
 
     try:
@@ -46,41 +42,29 @@ async def generate_unit_tests(payload: UnitTestRequest):
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-
 @router.get("/get-unit-tests")
-async def get_unit_tests(user_id: int, session_id: int):
+async def get_unit_tests(unit_test_id: int):
     log_event(
         level="INFO",
         service=SERVICE_NAME,
         function="get_unit_tests",
         message="Get unit tests API called",
-        metadata={
-            "user_id": user_id,
-            "session_id": session_id
-        },
+        metadata={"unit_test_id": unit_test_id},
     )
 
     try:
-        data = await get_unit_tests_service(
-            user_id=user_id,
-            session_id=session_id
-        )
-
-        return format_response(
-            data=data,
-            message="Unit tests fetched successfully",
-            status_code=200,
-        )
+        data = await get_unit_tests_service(unit_test_id)
+        return format_response(data=data, message="Unit tests fetched successfully", status_code=200)
 
     except HTTPException:
         raise
 
     except Exception:
         log_event(
-            level="ERROR",
-            service=SERVICE_NAME,
+            level="ERROR", 
+            service=SERVICE_NAME, 
             function="get_unit_tests",
-            message="Get unit tests failed",
-            stack_trace=traceback.format_exc(),
-        )
+            message="Get unit tests failed", 
+            stack_trace=traceback.format_exc()
+            )
         raise HTTPException(status_code=500, detail="Internal server error")

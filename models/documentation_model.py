@@ -1,15 +1,11 @@
+#documentation_model.py
+
 from tortoise import fields, models
 
 class Documentation(models.Model):
     id = fields.IntField(pk=True)
 
-    user = fields.ForeignKeyField("models.Users", related_name="documentations", on_delete=fields.CASCADE)
-
-    session = fields.ForeignKeyField("models.ValidationSession",related_name="documentations",on_delete=fields.CASCADE)
-
-    code = fields.ForeignKeyField("models.GeneratedCode", related_name="documentations", on_delete=fields.CASCADE)
-
-    tests = fields.ForeignKeyField("models.UnitTests", related_name="documentations", on_delete=fields.CASCADE)
+    insights = fields.ForeignKeyField("models.Insights",related_name="documentations",on_delete=fields.CASCADE)
 
     overview = fields.TextField()
     architecture = fields.TextField()
@@ -22,6 +18,7 @@ class Documentation(models.Model):
     next_steps = fields.JSONField()
 
     created_at = fields.DatetimeField(auto_now_add=True)
+    is_completed = fields.BooleanField(default=False)
 
     class Meta:
         table = "documentation"

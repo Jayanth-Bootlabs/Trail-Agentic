@@ -1,8 +1,6 @@
 import traceback
 import json
 from fastapi import HTTPException
-from schemas.unit_test_schema import UnitTestRequest
-from models.validation_model import ValidationSession
 from models.code_model import GeneratedCode
 from models.unit_tests_model import UnitTests
 from graph.builder import build_unit_tests_graph
@@ -12,32 +10,26 @@ from utils.helper import clean_ai_response
 SERVICE_NAME = "unit_tests_service"
 
 
-async def generate_unit_tests_service(payload: UnitTestRequest):
+async def generate_unit_tests_service(payload):
     try:
-        user_id = payload.user_id
-        session_id = payload.session_id
+        code_id = payload.code_id
 
         log_event(
             level="INFO",
             service=SERVICE_NAME,
             function="generate_unit_tests_service",
             message="Unit test generation started",
-            metadata={"user_id": user_id, "session_id": session_id}
+            metadata={"code_id": code_id}
         )
 
-        
-        session = await ValidationSession.get_or_none(id=session_id, user_id=user_id)
-
-        if not session:
-            raise HTTPException(status_code=404, detail="Session not found")
-
-        
-        code_record = await GeneratedCode.filter(session_id=session_id).first()
+        code_record = await GeneratedCode.get_or_none(id=code_id, is_completed=True)
 
         if not code_record:
-            raise HTTPException(status_code=404, detail="Generated code not found")
+            raise HTTPException(
+                status_code=404,
+                detail="Generated code not found or code generation is not completed yet"
+            )
 
-        
         code_payload = getattr(code_record, "code_json", None)
 
         if code_payload is None:
@@ -57,16 +49,14 @@ async def generate_unit_tests_service(payload: UnitTestRequest):
         if not user_input:
             raise HTTPException(status_code=500, detail="Generated code is empty")
 
-     
         graph = build_unit_tests_graph()
-        result = await graph.ainvoke({"session_id": session_id, "user_input": user_input})
+        result = await graph.ainvoke({"code_id": code_id, "user_input": user_input})
 
         raw_ai = result.get("ai_response")
 
         if not raw_ai:
             raise HTTPException(status_code=500, detail="Invalid AI response")
 
-        
         parsed_ai = None
 
         if isinstance(raw_ai, dict):
@@ -83,7 +73,6 @@ async def generate_unit_tests_service(payload: UnitTestRequest):
         else:
             parsed_ai = {"test_code": str(raw_ai)}
 
-       
         log_event(
             level="INFO",
             service=SERVICE_NAME,
@@ -92,30 +81,39 @@ async def generate_unit_tests_service(payload: UnitTestRequest):
             metadata={"parsed_keys": list(parsed_ai.keys()) if isinstance(parsed_ai, dict) else None}
         )
 
-        
         if isinstance(parsed_ai, dict):
             test_code = parsed_ai.get("test_code") or ""
-
             test_summary = parsed_ai.get("test_summary") or ""
-
             frameworks_used = parsed_ai.get("frameworks_used") or []
-
         else:
             test_code = str(parsed_ai)
             test_summary = ""
             frameworks_used = []
 
-        
         test_obj = await UnitTests.create(
-            user_id=user_id,
-            session_id=session_id,
-            code_id=code_record.id,
+            code_id=code_id,
             test_code=test_code,
             test_summary=test_summary,
-            frameworks_used=frameworks_used
+            frameworks_used=frameworks_used,
+            is_completed=True
         )
 
-        return test_obj
+        log_event(
+            level="INFO",
+            service=SERVICE_NAME,
+            function="generate_unit_tests_service",
+            message="Unit tests stored successfully",
+            metadata={"unit_test_id": test_obj.id}
+        )
+
+        return {
+            "unit_test_id": test_obj.id,
+            "code_id": code_id,
+            "test_code": test_code,
+            "test_summary": test_summary,
+            "frameworks_used": frameworks_used,
+            "created_at": str(test_obj.created_at) if test_obj.created_at else None,
+        }
 
     except HTTPException:
         raise
@@ -129,32 +127,30 @@ async def generate_unit_tests_service(payload: UnitTestRequest):
             metadata={"trace": traceback.format_exc()}
         )
         raise HTTPException(status_code=500, detail="Internal server error")
-    
 
-async def get_unit_tests_service(user_id: int, session_id: int):
+
+async def get_unit_tests_service(unit_test_id: int):
     try:
         log_event(
-            level="INFO",
-            service=SERVICE_NAME,
+            level="INFO", 
+            service=SERVICE_NAME, 
             function="get_unit_tests_service",
-            message="Fetching unit tests",
-            metadata={"user_id": user_id, "session_id": session_id},
-        )
+            message="Fetching unit tests", 
+            metadata={"unit_test_id": unit_test_id}
+            )
 
-        test_record = await UnitTests.filter(user_id=user_id,session_id=session_id).first()
+        test_record = await UnitTests.get_or_none(id=unit_test_id)
 
         if not test_record:
             raise HTTPException(status_code=404, detail="Unit tests not found")
 
         return {
-            "test_id": test_record.id,
-            "user_id": test_record.user_id,
-            "session_id": test_record.session_id,
+            "unit_test_id": test_record.id,
             "code_id": test_record.code_id,
             "test_code": test_record.test_code or "",
             "test_summary": test_record.test_summary or "",
             "frameworks_used": test_record.frameworks_used or [],
-            "created_at": str(test_record.created_at) if hasattr(test_record, "created_at") else None,
+            "created_at": str(test_record.created_at) if test_record.created_at else None,
         }
 
     except HTTPException:
@@ -162,10 +158,10 @@ async def get_unit_tests_service(user_id: int, session_id: int):
 
     except Exception:
         log_event(
-            level="ERROR",
-            service=SERVICE_NAME,
+            level="ERROR", 
+            service=SERVICE_NAME, 
             function="get_unit_tests_service",
-            message="Fetching unit tests failed",
-            metadata={"trace": traceback.format_exc()},
-        )
+            message="Fetching unit tests failed", 
+            metadata={"trace": traceback.format_exc()}
+            )
         raise HTTPException(status_code=500, detail="Internal server error")

@@ -3,16 +3,17 @@ from typing import List, Optional
 
 
 class GenerateDocumentationRequest(BaseModel):
-    user_id: int
-    session_id: int
+    insights_id: int
+
+
+class FetchDocumentationRequest(BaseModel):
+    documentation_id: int
 
 
 class DocumentationResponse(BaseModel):
     doc_id: int
-    user_id: int
-    session_id: int
-    
-    project_title: str
+    insights_id: int
+
     overview: str
     architecture: str
 

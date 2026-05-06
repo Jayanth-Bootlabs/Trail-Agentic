@@ -1,13 +1,11 @@
 import traceback
 from fastapi import APIRouter, HTTPException
 from schemas.documentation_schema import GenerateDocumentationRequest
-from services.documentation_service import generate_documentation_service,get_documentation_service
-
+from services.documentation_service import generate_documentation_service, get_documentation_service
 from utils.logger import log_event
 from utils.response import format_response
 
 router = APIRouter(tags=["Documentation"])
-
 SERVICE_NAME = "documentation_routes"
 
 
@@ -18,14 +16,12 @@ async def generate_documentation(payload: GenerateDocumentationRequest):
         service=SERVICE_NAME,
         function="generate_documentation",
         message="Generate documentation API called",
-        metadata={
-    "user_id": payload.user_id,
-    "session_id": payload.session_id
-},
+        metadata={"insights_id": payload.insights_id},
     )
 
     try:
         data = await generate_documentation_service(payload)
+
         return format_response(
             data=data,
             message="Documentation generated successfully",
@@ -47,33 +43,26 @@ async def generate_documentation(payload: GenerateDocumentationRequest):
 
 
 @router.get("/get-documentation")
-async def get_documentation(user_id: int, session_id: int):
+async def get_documentation(documentation_id: int):
     log_event(
         level="INFO",
         service=SERVICE_NAME,
         function="get_documentation",
         message="Get documentation API called",
-        metadata={"user_id": user_id, "session_id": session_id},
+        metadata={"documentation_id": documentation_id},
     )
 
     try:
-        data = await get_documentation_service(user_id, session_id)
-
-        return format_response(
-            data=data,
-            message="Documentation fetched successfully",
-            status_code=200,
-        )
+        data = await get_documentation_service(documentation_id)
+        return format_response(data=data, message="Documentation fetched successfully", status_code=200)
 
     except HTTPException:
         raise
 
     except Exception:
         log_event(
-            level="ERROR",
-            service=SERVICE_NAME,
-            function="get_documentation",
-            message="Get documentation failed",
-            stack_trace=traceback.format_exc(),
-        )
+            level="ERROR", 
+            service=SERVICE_NAME, function="get_documentation",
+            message="Get documentation failed", 
+            stack_trace=traceback.format_exc())
         raise HTTPException(status_code=500, detail="Internal server error")
