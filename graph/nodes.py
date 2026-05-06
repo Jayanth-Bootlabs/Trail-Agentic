@@ -83,13 +83,6 @@ async def requirements_node(state: GraphState) -> GraphState:
 
         parsed = clean_ai_response(response)
 
-        if not parsed:
-            parsed = {
-                "status": "clarify",
-                "message": "Please provide more details.",
-                "data": {}
-            }
-
         log_event(
             level="INFO",
             service=SERVICE_NAME,
@@ -125,30 +118,32 @@ async def coding_node(state: GraphState) -> GraphState:
 
     try:
         prompt = get_code_prompt(state["user_input"])
-
         response = await llm.generate(prompt)
 
         parsed = clean_ai_response(response)
 
-        if not parsed:
+        if not parsed or not isinstance(parsed, dict):
             parsed = {
                 "status": "partial",
                 "message": "Invalid AI response",
                 "code": {}
             }
 
+        status = parsed.get("status", "partial")
+        parsed["status"] = status
+
         log_event(
             level="INFO",
             service=SERVICE_NAME,
             function="coding_node",
             message="Coding node completed",
-            metadata={"status": parsed["status"]},
+            metadata={"status": status},
         )
 
         return {
             **state,
             "ai_response": parsed,
-            "status": parsed["status"]
+            "status": status
         }
 
     except Exception:
@@ -245,7 +240,13 @@ async def insights_node(state:GraphState) -> GraphState:
     )
 
     try:
-        prompt=get_insights_prompt(state["user_input"])
+        input_data = state["user_input"]
+
+        prompt = get_insights_prompt(
+            input_data.get("requirements", ""),
+            input_data.get("code", ""),
+            input_data.get("tests", "")
+        )
 
         response=await llm.generate(prompt)
 
@@ -299,7 +300,14 @@ async def documentation_node(state:GraphState) ->GraphState:
     )
 
     try:
-        prompt=get_documentation_prompt(state["user_input"])
+        input_data = state["user_input"]
+
+        prompt = get_documentation_prompt(
+            input_data.get("requirements", ""),
+            input_data.get("code", ""),
+            input_data.get("tests", ""),
+            input_data.get("insights", "")
+        )
 
         response=await llm.generate(prompt)
 

@@ -11,7 +11,7 @@ router = APIRouter(tags=["Validation"])
 SERVICE_NAME = "validation_routes"
 
 
-@router.post("/validate-request")
+@router.post("/validate_request")
 async def validate_request(request: Request, payload: ValidateRequest):
     log_event(
         level="INFO",
@@ -50,7 +50,7 @@ async def validate_request(request: Request, payload: ValidateRequest):
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-@router.post("/continue-request")
+@router.post("/continue_request")
 async def continue_request(request: Request, payload: ContinueRequest):
     log_event(
         level="INFO",

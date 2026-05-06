@@ -1,5 +1,3 @@
-#documentation_model.py
-
 from tortoise import fields, models
 
 class Documentation(models.Model):

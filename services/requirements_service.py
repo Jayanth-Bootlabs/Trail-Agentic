@@ -4,11 +4,12 @@ from models.validation_model import ValidationSession
 from models.requirements_model import RequirementSession
 from graph.builder import build_requirements_graph
 from utils.logger import log_event
+from schemas.requirements_schema import StartRequirementRequest
 
 SERVICE_NAME = "requirements_service"
 
 
-async def start_requirements_request(payload):
+async def start_requirements_request(payload: StartRequirementRequest):
     try:
         log_event(
             level="INFO",
@@ -49,7 +50,6 @@ async def start_requirements_request(payload):
         session = await RequirementSession.create(
             validation_session=validation,
             user_input=user_input,
-            combined_input=user_input,
             status=ai["status"],
             ai_response=ai,
             is_completed=(ai["status"] == "completed")

@@ -8,6 +8,7 @@ Generate complete, runnable project source code from the given **requirements**.
 Return JSON only:
 
 {{
+  "status": "completed",
   "project_title": "",
   "tech_stack": [],
   "file_structure": [],

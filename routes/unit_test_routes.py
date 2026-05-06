@@ -9,7 +9,7 @@ router = APIRouter(tags=["Unit Tests"])
 SERVICE_NAME = "unit_tests_routes"
 
 
-@router.post("/generate-unit-tests")
+@router.post("/generate_unit_tests")
 async def generate_unit_tests(payload: UnitTestRequest):
     log_event(
         level="INFO",
@@ -42,7 +42,7 @@ async def generate_unit_tests(payload: UnitTestRequest):
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-@router.get("/get-unit-tests")
+@router.get("/fetch_unit_tests")
 async def get_unit_tests(unit_test_id: int):
     log_event(
         level="INFO",

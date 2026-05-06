@@ -1,19 +1,15 @@
-import traceback
 import json
-import inspect
+import traceback
 from fastapi import HTTPException
-from models.insights_model import Insights
 from models.unit_tests_model import UnitTests
-from models.code_model import GeneratedCode
-from models.requirements_model import RequirementSession
-from prompts.insights_prompt import get_insights_prompt
-from utils.gemini_llm import GeminiLLM
+from schemas.insights_schema import GenerateInsightsRequest
+from models.insights_model import Insights
 from utils.logger import log_event
+from graph.builder import build_insights_graph
 
 SERVICE_NAME = "insights_service"
 
-
-async def generate_insights_service(payload):
+async def generate_insights_service(payload: GenerateInsightsRequest):
     try:
         unit_test_id = payload.unit_test_id
 
@@ -25,7 +21,10 @@ async def generate_insights_service(payload):
             metadata={"unit_test_id": unit_test_id}
         )
 
-        tests_record = await UnitTests.get_or_none(id=unit_test_id, is_completed=True)
+        tests_record = await UnitTests.filter(
+            id=unit_test_id,
+            is_completed=True
+        ).prefetch_related("code__requirement").first()
 
         if not tests_record:
             raise HTTPException(
@@ -33,13 +32,11 @@ async def generate_insights_service(payload):
                 detail="Unit test not found or unit test generation is not completed yet"
             )
 
-        code_record = await GeneratedCode.get_or_none(id=tests_record.code_id)
-
+        code_record = tests_record.code
         if not code_record:
             raise HTTPException(status_code=404, detail="Generated code not found")
 
-        requirement_record = await RequirementSession.get_or_none(id=code_record.requirement_id)
-
+        requirement_record = code_record.requirement
         if not requirement_record:
             raise HTTPException(status_code=404, detail="Requirement session not found")
 
@@ -60,17 +57,17 @@ async def generate_insights_service(payload):
 
         tests_content = getattr(tests_record, "test_code", "") or ""
 
-        prompt = get_insights_prompt(
-            requirements_json=requirement_record.combined_input,
-            code_content=code_content,
-            test_content=tests_content
-        )
+        graph = build_insights_graph()
 
-        llm = GeminiLLM()
-        response = llm.invoke(prompt)
+        result = await graph.ainvoke({
+            "user_input": {
+                "requirements": requirement_record.user_input,
+                "code": code_content,
+                "tests": tests_content
+            }
+        })
 
-        if inspect.isawaitable(response):
-            response = await response
+        response = result.get("ai_response")
 
         insights_data = None
 
@@ -112,7 +109,6 @@ async def generate_insights_service(payload):
 
         return {
             "insight_id": insight_obj.id,
-            "unit_test_id": unit_test_id,
             "insights_summary": insight_obj.insights_summary,
             "key_insights": insight_obj.key_insights,
             "missing_implementations": insight_obj.missing_implementations,
@@ -122,7 +118,6 @@ async def generate_insights_service(payload):
             "refactoring_suggestions": insight_obj.refactoring_suggestions,
             "dependencies": insight_obj.dependencies,
             "recommendations": insight_obj.recommendations,
-            "created_at": str(insight_obj.created_at) if insight_obj.created_at else None,
         }
 
     except HTTPException:
@@ -137,7 +132,6 @@ async def generate_insights_service(payload):
             metadata={"trace": traceback.format_exc()}
         )
         raise HTTPException(status_code=500, detail="Internal server error")
-
 
 async def get_insights_service(insights_id: int):
     try:
@@ -156,7 +150,6 @@ async def get_insights_service(insights_id: int):
 
         return {
             "insight_id": insights.id,
-            "unit_test_id": insights.tests_id,
             "insights_summary": insights.insights_summary,
             "key_insights": insights.key_insights,
             "missing_implementations": insights.missing_implementations,
@@ -166,7 +159,6 @@ async def get_insights_service(insights_id: int):
             "refactoring_suggestions": insights.refactoring_suggestions,
             "dependencies": insights.dependencies,
             "recommendations": insights.recommendations,
-            "created_at": str(insights.created_at) if insights.created_at else None,
         }
 
     except HTTPException:

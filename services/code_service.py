@@ -1,19 +1,16 @@
 import traceback
-import json
 from fastapi import HTTPException
 from models.requirements_model import RequirementSession
 from schemas.code_schema import CodeGenerationRequest
 from models.code_model import GeneratedCode
-from prompts.code_prompt import get_code_prompt
-from utils.gemini_llm import llm
+from graph.builder import build_coding_graph
 from utils.logger import log_event
 
 SERVICE_NAME = "code_generation_service"
 
-
-async def generate_code_service(payload:CodeGenerationRequest):
+async def generate_code_service(payload: CodeGenerationRequest):
     try:
-        requirements_id=payload.requirements_id
+        requirements_id = payload.requirements_id
 
         log_event(
             level="INFO",
@@ -23,7 +20,6 @@ async def generate_code_service(payload:CodeGenerationRequest):
             metadata={"requirements_id": requirements_id},
         )
 
-       
         requirement = await RequirementSession.get_or_none(
             id=requirements_id,
             is_completed=True
@@ -35,22 +31,34 @@ async def generate_code_service(payload:CodeGenerationRequest):
                 detail="Requirement not found or not completed yet"
             )
 
-        prompt = get_code_prompt(requirement.combined_input)
-        response = await llm.generate(prompt)
+        structured_input = requirement.user_input
 
-        response = response.strip()
-        if response.startswith("```json"):
-            response = response[7:]
-        if response.endswith("```"):
-            response = response[:-3]
+        graph = build_coding_graph()
 
-        code_data = json.loads(response)
-
+        result = await graph.ainvoke({
+            "user_input": structured_input
+        })
         
+        code_data = result.get("ai_response")
+
+        if not code_data or not isinstance(code_data, dict):
+            code_data = {
+                "status": "partial",
+                "message": "Invalid AI response",
+                "source_code": {}
+            }
+
+        source_code = code_data.get("source_code", {})
+
+        if source_code and isinstance(source_code, dict) and len(source_code) > 0:
+            code_data["status"] = "completed"
+        else:
+            code_data["status"] = "partial"
+
         code_obj = await GeneratedCode.create(
             requirement_id=requirements_id,
             code_json=code_data,
-            is_completed=True        
+            is_completed=(code_data.get("status") == "completed")
         )
 
         log_event(
@@ -63,7 +71,6 @@ async def generate_code_service(payload:CodeGenerationRequest):
 
         return {
             "code_id": code_obj.id,
-            "requirements_id": requirements_id,
             "source_code": code_data.get("source_code", {}),
         }
 
@@ -79,16 +86,16 @@ async def generate_code_service(payload:CodeGenerationRequest):
             stack_trace=traceback.format_exc(),
         )
         raise HTTPException(status_code=500, detail="Internal server error")
-
-
+    
 async def get_generated_code_service(code_id: int):
     try:
         log_event(
-            level="INFO", 
-            service=SERVICE_NAME, 
+            level="INFO",
+            service=SERVICE_NAME,
             function="get_generated_code_service",
-            message="Fetching generated code", 
-            metadata={"code_id": code_id})
+            message="Fetching generated code",
+            metadata={"code_id": code_id}
+        )
 
         code_record = await GeneratedCode.get_or_none(id=code_id)
 
@@ -99,12 +106,10 @@ async def get_generated_code_service(code_id: int):
 
         return {
             "code_id": code_record.id,
-            "requirements_id": code_record.requirement_id,
             "project_title": code_data.get("project_title", ""),
             "tech_stack": code_data.get("tech_stack", []),
             "file_structure": code_data.get("file_structure", []),
             "source_code": code_data.get("source_code", {}),
-            "created_at": str(code_record.created_at) if code_record.created_at else None,
         }
 
     except HTTPException:
@@ -112,10 +117,10 @@ async def get_generated_code_service(code_id: int):
 
     except Exception:
         log_event(
-            level="ERROR", 
-            service=SERVICE_NAME, 
+            level="ERROR",
+            service=SERVICE_NAME,
             function="get_generated_code_service",
-            message="Fetching code failed", 
+            message="Fetching code failed",
             stack_trace=traceback.format_exc()
-            )
+        )
         raise HTTPException(status_code=500, detail="Internal server error")

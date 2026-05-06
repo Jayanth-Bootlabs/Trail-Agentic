@@ -9,6 +9,7 @@ Produce structured insights.
 Return JSON only:
 
 {{
+  "status": "completed",
   "insights_summary": "",
   "key_insights": [],
   "missing_implementations": [],

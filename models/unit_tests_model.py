@@ -1,5 +1,3 @@
-#unit_tests_model.py
-
 from tortoise import fields, models
 
 class UnitTests(models.Model):

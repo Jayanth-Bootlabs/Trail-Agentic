@@ -9,7 +9,7 @@ router = APIRouter(tags=["Insights"])
 SERVICE_NAME = "insights_routes"
 
 
-@router.post("/generate-insights")
+@router.post("/generate_insights")
 async def generate_insights(payload: GenerateInsightsRequest):
     log_event(
         level="INFO",
@@ -42,7 +42,7 @@ async def generate_insights(payload: GenerateInsightsRequest):
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-@router.get("/get-insights")
+@router.get("/fetch_insights")
 async def get_insights(insights_id: int):
     log_event(
         level="INFO",
