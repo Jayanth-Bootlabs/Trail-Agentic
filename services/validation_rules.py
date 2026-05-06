@@ -11,38 +11,47 @@ PLATFORM_WORDS = {
 }
 
 
+#Removes left and right space and converts to lower case
 def clean_text(text: str) -> str:
     return text.strip().lower()
 
 
+#Will check for empty input
 def is_empty(text: str) -> bool:
     return len(clean_text(text)) == 0
 
 
+#Will check if input is too short
 def too_short(text: str) -> bool:
     return len(clean_text(text).split()) < 2
+
 
 
 def looks_like_spam(text: str) -> bool:
     t = clean_text(text)
 
+    #Will check whether input consists only numericals
     if re.fullmatch(r"[0-9]+", t):
         return True
 
+    #Will check whether input consists only of 1 to 4 lowercase letters
     if re.fullmatch(r"[a-z]{1,4}", t):
         return True
-
+    
+    #Will check if the input has 2 or fewer unique characters (ignoring spaces)
     if len(set(t.replace(" ", ""))) <= 2:
         return True
 
     return False
 
 
+#Will return TRUE, if project keyword is there
 def detect_project_keyword(text: str) -> bool:
     words = set(clean_text(text).split())
     return len(words.intersection(PROJECT_WORDS)) > 0
 
 
+#Will return the platform of what user wants
 def detect_platform(text: str):
     words = set(clean_text(text).split())
     return list(words.intersection(PLATFORM_WORDS))

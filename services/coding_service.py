@@ -1,85 +1,121 @@
-import traceback
-from fastapi import HTTPException
-from models.requirements_model import RequirementSession
-from models.coding_model import CodingSession
-from graph.builder import build_coding_graph
-from utils.logger import log_event
+# import traceback
+# import json
+# from fastapi import HTTPException
+# from models.requirements_model import RequirementSession
+# from models.code_model import GeneratedCode
+# from prompts.code_prompt import get_code_prompt
+# from utils.gemini_llm import llm
+# from utils.logger import log_event
 
-SERVICE_NAME = "coding_service"
+# SERVICE_NAME = "code_generation_service"
 
 
-async def start_coding_request(payload):
-    try:
-        log_event(
-            level="INFO",
-            service=SERVICE_NAME,
-            function="start_coding_request",
-            message="Coding started",
-            metadata={"requirement_session_id": payload.requirement_session_id},
-        )
+# async def generate_code_service(payload):
+#     try:
+#         requirements_id = payload.requirements_id
 
-        requirement = await RequirementSession.get_or_none(
-            id=payload.requirement_session_id
-        )
+#         log_event(
+#             level="INFO",
+#             service=SERVICE_NAME,
+#             function="generate_code_service",
+#             message="Code generation started",
+#             metadata={"requirements_id": requirements_id},
+#         )
 
-        if not requirement:
-            raise HTTPException(status_code=404, detail="Requirement not found")
+#         requirement = await RequirementSession.get_or_none(
+#             id=requirements_id,
+#             is_completed=True
+#         )
 
-        if not requirement.is_completed:
-            raise HTTPException(
-                status_code=400,
-                detail="Requirements not completed"
-            )
+#         if not requirement:
+#             raise HTTPException(
+#                 status_code=404,
+#                 detail="Requirement not found or not completed yet"
+#             )
 
-        req_data = requirement.ai_response
+#         prompt = get_code_prompt(requirement.combined_input)
+#         response = await llm.generate(prompt)
 
-        if not req_data:
-            raise HTTPException(
-                status_code=400,
-                detail="Missing requirement AI response"
-            )
+#         response = response.strip()
+#         if response.startswith("```json"):
+#             response = response[7:]
+#         if response.endswith("```"):
+#             response = response[:-3]
 
-        structured_input = req_data.get("data", {})
+#         code_data = json.loads(response)
 
-        graph = build_coding_graph()
+#         code_obj = await GeneratedCode.create(
+#             requirement_id=requirements_id,
+#             code_json=code_data,
+#             is_completed=True
+#         )
 
-        result = await graph.ainvoke({
-            "user_input": structured_input
-        })
+#         log_event(
+#             level="INFO",
+#             service=SERVICE_NAME,
+#             function="generate_code_service",
+#             message="Code stored successfully",
+#             metadata={"code_id": code_obj.id},
+#         )
 
-        ai = result["ai_response"]
+#         return {
+#             "code_id": code_obj.id,
+#             "requirements_id": requirements_id,
+#             "source_code": code_data.get("source_code", {}),
+#         }
 
-        session = await CodingSession.create(
-            requirement_session=requirement,
-            requirements_input=structured_input,
-            status=ai["status"],
-            ai_response=ai,
-            is_completed=(ai["status"] == "completed")
-        )
+#     except HTTPException:
+#         raise
 
-        log_event(
-            level="INFO",
-            service=SERVICE_NAME,
-            function="start_coding_request",
-            message="Coding completed",
-            metadata={"coding_session_id": session.id},
-        )
+#     except Exception:
+#         log_event(
+#             level="ERROR",
+#             service=SERVICE_NAME,
+#             function="generate_code_service",
+#             message="Code generation failed",
+#             stack_trace=traceback.format_exc(),
+#         )
+#         raise HTTPException(status_code=500, detail="Internal server error")
 
-        return {
-            "coding_session_id": session.id,
-            "status": ai["status"],
-            "code": ai.get("code", {})
-        }
 
-    except HTTPException:
-        raise
+# async def get_generated_code_service(payload):
+#     try:
+#         code_id = payload.code_id
 
-    except Exception:
-        log_event(
-            level="ERROR",
-            service=SERVICE_NAME,
-            function="start_coding_request",
-            message="Coding failed",
-            stack_trace=traceback.format_exc(),
-        )
-        raise HTTPException(status_code=500, detail="Internal server error")
+#         log_event(
+#             level="INFO",
+#             service=SERVICE_NAME,
+#             function="get_generated_code_service",
+#             message="Fetching generated code",
+#             metadata={"code_id": code_id},
+#         )
+
+#         code_record = await GeneratedCode.get_or_none(id=code_id)
+
+#         if not code_record:
+#             raise HTTPException(status_code=404, detail="Generated code not found")
+
+#         code_data = code_record.code_json or {}
+
+#         return {
+#             "code_id": code_record.id,
+#             "requirements_id": code_record.requirement_id,
+#             "project_title": code_data.get("project_title", ""),
+#             "tech_stack": code_data.get("tech_stack", []),
+#             "file_structure": code_data.get("file_structure", []),
+#             "source_code": code_data.get("source_code", {}),
+#             "created_at": str(code_record.created_at) if code_record.created_at else None,
+#         }
+
+#     except HTTPException:
+#         raise
+
+#     except Exception:
+#         log_event(
+#             level="ERROR",
+#             service=SERVICE_NAME,
+#             function="get_generated_code_service",
+#             message="Fetching code failed",
+#             stack_trace=traceback.format_exc(),
+#         )
+#         raise HTTPException(status_code=500, detail="Internal server error")

@@ -1,10 +1,8 @@
 import traceback
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from schemas.validation_schema import ValidateRequest, ContinueRequest
-from services.validation_service import (
-    validate_prompt_request,
-    continue_prompt_request
-)
+from services.validation_service import validate_prompt_request,continue_prompt_request
+
 from utils.logger import log_event
 from utils.response import format_response
 
@@ -14,17 +12,23 @@ SERVICE_NAME = "validation_routes"
 
 
 @router.post("/validate-request")
-async def validate_request(payload: ValidateRequest):
+async def validate_request(request: Request, payload: ValidateRequest):
     log_event(
         level="INFO",
         service=SERVICE_NAME,
         function="validate_request",
-        message="Validate prompt request API called",
-        metadata={"user_input": payload.user_input},
+        message="Validate request API called",
+        metadata={
+            "user_id": request.state.user.id,
+            "user_input": payload.user_input,
+        },
     )
 
     try:
-        data = await validate_prompt_request(payload)
+        data = await validate_prompt_request(
+            payload,
+            request.state.user
+        )
 
         return format_response(
             data=data,
@@ -47,17 +51,23 @@ async def validate_request(payload: ValidateRequest):
 
 
 @router.post("/continue-request")
-async def continue_request(payload: ContinueRequest):
+async def continue_request(request: Request, payload: ContinueRequest):
     log_event(
         level="INFO",
         service=SERVICE_NAME,
         function="continue_request",
-        message="Continue prompt request API called",
-        metadata={"session_id": payload.session_id},
+        message="Continue request API called",
+        metadata={
+            "user_id": request.state.user.id,
+            "session_id": payload.session_id,
+        },
     )
 
     try:
-        data = await continue_prompt_request(payload)
+        data = await continue_prompt_request(
+            payload,
+            request.state.user
+        )
 
         return format_response(
             data=data,

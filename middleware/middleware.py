@@ -21,8 +21,8 @@ class UserTypeMiddleware(BaseHTTPMiddleware):
             if request.url.path in EXCLUDED_PATHS:
                 return await call_next(request)
 
-            user_email = request.headers.get("Authorization")
-
+            user_email = "jayanth@bootlabstech.com"
+            
             if not user_email:
                 return JSONResponse(
                     status_code=401,
