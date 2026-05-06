@@ -9,7 +9,7 @@ router = APIRouter(tags=["Documentation"])
 SERVICE_NAME = "documentation_routes"
 
 
-@router.post("/generate-documentation")
+@router.post("/generate_documentation")
 async def generate_documentation(payload: GenerateDocumentationRequest):
     log_event(
         level="INFO",
@@ -42,7 +42,7 @@ async def generate_documentation(payload: GenerateDocumentationRequest):
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-@router.get("/get-documentation")
+@router.get("/fetch_documentation")
 async def get_documentation(documentation_id: int):
     log_event(
         level="INFO",

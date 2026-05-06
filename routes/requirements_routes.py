@@ -14,7 +14,7 @@ router = APIRouter(tags=["Requirements"])
 SERVICE_NAME = "requirements_routes"
 
 
-@router.post("/start_requirements")
+@router.post("/generate_requirements")
 async def start_requirements(payload: StartRequirementRequest):
     log_event(
         level="INFO",

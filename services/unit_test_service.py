@@ -2,6 +2,7 @@ import traceback
 import json
 from fastapi import HTTPException
 from models.code_model import GeneratedCode
+from schemas.unit_test_schema import UnitTestRequest
 from models.unit_tests_model import UnitTests
 from graph.builder import build_unit_tests_graph
 from utils.logger import log_event
@@ -10,7 +11,7 @@ from utils.helper import clean_ai_response
 SERVICE_NAME = "unit_tests_service"
 
 
-async def generate_unit_tests_service(payload):
+async def generate_unit_tests_service(payload: UnitTestRequest):
     try:
         code_id = payload.code_id
 
@@ -108,7 +109,6 @@ async def generate_unit_tests_service(payload):
 
         return {
             "unit_test_id": test_obj.id,
-            "code_id": code_id,
             "test_code": test_code,
             "test_summary": test_summary,
             "frameworks_used": frameworks_used,
@@ -146,11 +146,9 @@ async def get_unit_tests_service(unit_test_id: int):
 
         return {
             "unit_test_id": test_record.id,
-            "code_id": test_record.code_id,
             "test_code": test_record.test_code or "",
             "test_summary": test_record.test_summary or "",
             "frameworks_used": test_record.frameworks_used or [],
-            "created_at": str(test_record.created_at) if test_record.created_at else None,
         }
 
     except HTTPException:

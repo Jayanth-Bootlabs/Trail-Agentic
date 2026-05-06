@@ -8,6 +8,7 @@ Generate complete project documentation from **requirements**, **generated code*
 Return JSON only:
 
 {{
+  "status": "completed",
   "project_title": "",
   "overview": "",
   "architecture": "",
