@@ -1,6 +1,5 @@
 import traceback
 from graph.state import GraphState
-from prompts.validation_prompt import get_validation_prompt
 from utils.gemini_llm import llm
 from utils.logger import log_event
 from utils.helper import clean_ai_response
@@ -10,62 +9,7 @@ from prompts.unit_test_prompt import get_unit_tests_prompt
 from prompts.insights_prompt import get_insights_prompt
 from prompts.documentation_prompt import get_documentation_prompt
 
-SERVICE_NAME = "validation_node"
-
-
-async def validate_node(state: GraphState) -> GraphState:
-    log_event(
-        level="INFO",
-        service=SERVICE_NAME,
-        function="validate_node",
-        message="Validation node started",
-        metadata={"user_input": state["user_input"]},
-    )
-
-    try:
-        prompt = get_validation_prompt(state["user_input"])
-
-        response = await llm.generate(prompt)
-
-        parsed = clean_ai_response(response)
-
-        if not parsed:
-            log_event(
-                level="WARNING",
-                service=SERVICE_NAME,
-                function="validate_node",
-                message="Invalid JSON response from LLM",
-                metadata={"raw_response": response},
-            )
-
-            parsed = {
-                "status": "invalid",
-                "message": "Invalid AI response"
-            }
-
-        log_event(
-            level="INFO",
-            service=SERVICE_NAME,
-            function="validate_node",
-            message="Validation node completed",
-            metadata={"status": parsed["status"]},
-        )
-
-        return {
-            **state,
-            "ai_response": parsed,
-            "status": parsed["status"]
-        }
-
-    except Exception:
-        log_event(
-            level="ERROR",
-            service=SERVICE_NAME,
-            function="validate_node",
-            message="Validation node failed",
-            stack_trace=traceback.format_exc(),
-        )
-        raise
+SERVICE_NAME = "nodes"
 
 async def requirements_node(state: GraphState) -> GraphState:
     log_event(
