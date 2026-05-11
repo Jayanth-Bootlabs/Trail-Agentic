@@ -7,7 +7,6 @@ class ValidationSession(models.Model):
     user = fields.ForeignKeyField("models.Users",related_name="validation_sessions",on_delete=fields.CASCADE)
 
     user_input = fields.TextField()
-    combined_input = fields.TextField(null=True)
     status = fields.CharField(max_length=50, default="in_progress")
     ai_response = fields.JSONField(null=True)
     is_completed = fields.BooleanField(default=False)
