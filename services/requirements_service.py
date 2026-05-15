@@ -1,15 +1,15 @@
 import traceback
 from fastapi import HTTPException
+from builder.requirements_builder import build_requirements_graph
+from schemas.requirements_schema import StartRequirementRequest
 from models.validation_model import ValidationSession
 from models.requirements_model import RequirementSession
-from graph.builder import build_requirements_graph
 from utils.logger import log_event
-from schemas.requirements_schema import StartRequirementRequest
 
 SERVICE_NAME = "requirements_service"
 
 
-async def start_requirements_request(payload: StartRequirementRequest):
+async def start_requirements_request(payload: StartRequirementRequest, user):
     try:
         log_event(
             level="INFO",
@@ -17,7 +17,8 @@ async def start_requirements_request(payload: StartRequirementRequest):
             function="start_requirements_request",
             message="Starting requirements gathering",
             metadata={
-                "validation_session_id": payload.validation_session_id
+                "validation_session_id": payload.validation_session_id,
+                "user_id": user.id,
             },
         )
 
@@ -37,22 +38,45 @@ async def start_requirements_request(payload: StartRequirementRequest):
                 detail="Validation is not completed successfully"
             )
 
-        user_input = validation.combined_input or validation.user_input
+        user_input = validation.user_input
 
         graph = build_requirements_graph()
 
-        result = await graph.ainvoke({
-            "user_input": user_input
-        })
+        config = {
+            "configurable": {
+                "thread_id": f"requirements-{payload.validation_session_id}"
+            }
+        }
 
-        ai = result["ai_response"]
+        result = await graph.ainvoke(
+            {
+                "user_input": user_input,
+                "user_name": user.name,
+                "history": [],
+                "attempts": 0,
+                "messages": [],
+                "reasoning": [],
+                "retry_count": 0
+            },
+            config=config
+        )
+
+        ai = result.get("requirements", {})
+
+        log_event(
+            level="INFO",
+            service=SERVICE_NAME,
+            function="start_requirements_request",
+            message="Requirements data from state",
+            metadata={"ai_keys": list(ai.keys()) if ai else []},
+        )
 
         session = await RequirementSession.create(
             validation_session=validation,
             user_input=user_input,
-            status=ai["status"],
+            status=result.get("status"),
             ai_response=ai,
-            is_completed=(ai["status"] == "completed")
+            is_completed=(result.get("status") == "valid"),
         )
 
         log_event(
@@ -62,15 +86,15 @@ async def start_requirements_request(payload: StartRequirementRequest):
             message="Requirements gathering completed",
             metadata={
                 "requirement_session_id": session.id,
-                "status": ai["status"]
+                "status": result.get("status"),
             },
         )
 
         return {
             "requirement_session_id": session.id,
-            "status": ai["status"],
-            "message": ai["message"],
-            "data": ai.get("data", {})
+            "status": result.get("status"),
+            "message": ai.get("message", ""),
+            "data": ai.get("data", {}),
         }
 
     except HTTPException:

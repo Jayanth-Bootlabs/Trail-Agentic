@@ -1,15 +1,15 @@
 import traceback
 from fastapi import HTTPException
+from builder.documentation_builder import build_documentation_graph
+from schemas.documentation_schema import GenerateDocumentationRequest
 from models.insights_model import Insights
 from models.documentation_model import Documentation
 from utils.logger import log_event
-from utils.helper import clean_ai_response
-from graph.builder import build_documentation_graph
 
 SERVICE_NAME = "documentation_service"
 
 
-async def generate_documentation_service(payload):
+async def generate_documentation_service(payload: GenerateDocumentationRequest):
     try:
         insights_id = payload.insights_id
 
@@ -18,7 +18,7 @@ async def generate_documentation_service(payload):
             service=SERVICE_NAME,
             function="generate_documentation_service",
             message="Documentation generation started",
-            metadata={"insights_id": insights_id}
+            metadata={"insights_id": insights_id},
         )
 
         insights_record = await Insights.filter(
@@ -51,41 +51,51 @@ async def generate_documentation_service(payload):
         code_for_prompt = code_payload if isinstance(code_payload, dict) else str(code_payload)
         tests_content = getattr(tests_record, "test_code", "") or ""
         requirements_input = requirement_record.user_input
-        
+
         graph = build_documentation_graph()
 
-        result = await graph.ainvoke({
-            "user_input": {
+        config = {
+            "configurable": {
+                "thread_id": f"documentation-{insights_id}"
+            }
+        }
+
+        result = await graph.ainvoke(
+            {
                 "requirements": requirements_input,
                 "code": code_for_prompt,
-                "tests": tests_content
-            }
-        })
+                "test_code": tests_content,
+                "history": [],
+                "attempts": 0,
+                "messages": [],
+                "reasoning": [],
+                "retry_count": 0
+            },
+            config=config
+        )
 
-        raw_ai = result.get("ai_response")
+        ai = result.get("documentation", {})
 
-        if not raw_ai:
-            raise HTTPException(status_code=500, detail="Invalid AI response")
-
-        if isinstance(raw_ai, dict):
-            doc_data = raw_ai
-        else:
-            doc_data = clean_ai_response(str(raw_ai))
-
-        if not doc_data:
-            log_event(
-                level="ERROR",
-                service=SERVICE_NAME,
-                function="generate_documentation_service",
-                message="Invalid documentation format from AI",
-                metadata={"raw_response": raw_ai}
-            )
-            raise HTTPException(status_code=500, detail="Invalid documentation format")
+        log_event(
+            level="INFO",
+            service=SERVICE_NAME,
+            function="generate_documentation_service",
+            message="Documentation data from state",
+            metadata={"ai_keys": list(ai.keys()) if ai else []},
+        )
 
         doc_obj = await Documentation.create(
-            insights_id=insights_id,
-            is_completed=True,
-            **doc_data
+            insights=insights_record,
+            overview=ai.get("overview", ""),
+            architecture=ai.get("architecture", ""),
+            file_responsibilities=ai.get("file_responsibilities", []),
+            functional_requirements=ai.get("functional_requirements", []),
+            non_functional_requirements=ai.get("non_functional_requirements", []),
+            tech_stack_used=ai.get("tech_stack_used", []),
+            assumptions=ai.get("assumptions", []),
+            test_summary=ai.get("test_summary", ""),
+            next_steps=ai.get("next_steps", []),
+            is_completed=(result.get("status") == "valid"),
         )
 
         log_event(
@@ -93,11 +103,16 @@ async def generate_documentation_service(payload):
             service=SERVICE_NAME,
             function="generate_documentation_service",
             message="Documentation stored successfully",
-            metadata={"doc_id": doc_obj.id}
+            metadata={
+                "doc_id": doc_obj.id,
+                "insights_id": insights_id,
+                "status": result.get("status"),
+            },
         )
 
         return {
             "doc_id": doc_obj.id,
+            "insights_id": insights_id,
             "overview": doc_obj.overview,
             "architecture": doc_obj.architecture,
             "file_responsibilities": doc_obj.file_responsibilities,
@@ -107,6 +122,9 @@ async def generate_documentation_service(payload):
             "assumptions": doc_obj.assumptions,
             "test_summary": doc_obj.test_summary,
             "next_steps": doc_obj.next_steps,
+            "is_completed": doc_obj.is_completed,
+            "created_at": str(doc_obj.created_at) if doc_obj.created_at else None,
+            "status": result.get("status"),
         }
 
     except HTTPException:
@@ -118,18 +136,20 @@ async def generate_documentation_service(payload):
             service=SERVICE_NAME,
             function="generate_documentation_service",
             message="Documentation generation failed",
-            metadata={"trace": traceback.format_exc()}
+            metadata={"trace": traceback.format_exc()},
         )
         raise HTTPException(status_code=500, detail="Internal server error")
+
 
 async def get_documentation_service(documentation_id: int):
     try:
         log_event(
-            level="INFO", 
-            service=SERVICE_NAME, 
+            level="INFO",
+            service=SERVICE_NAME,
             function="get_documentation_service",
-            message="Fetching documentation", 
-            metadata={"documentation_id": documentation_id})
+            message="Fetching documentation",
+            metadata={"documentation_id": documentation_id},
+        )
 
         doc = await Documentation.get_or_none(id=documentation_id)
 
@@ -138,6 +158,7 @@ async def get_documentation_service(documentation_id: int):
 
         return {
             "doc_id": doc.id,
+            "insights_id": doc.insights_id,
             "overview": doc.overview,
             "architecture": doc.architecture,
             "file_responsibilities": doc.file_responsibilities,
@@ -147,6 +168,8 @@ async def get_documentation_service(documentation_id: int):
             "assumptions": doc.assumptions,
             "test_summary": doc.test_summary,
             "next_steps": doc.next_steps,
+            "is_completed": doc.is_completed,
+            "created_at": str(doc.created_at) if doc.created_at else None,
         }
 
     except HTTPException:
@@ -154,10 +177,10 @@ async def get_documentation_service(documentation_id: int):
 
     except Exception:
         log_event(
-            level="ERROR", 
-            service=SERVICE_NAME, 
+            level="ERROR",
+            service=SERVICE_NAME,
             function="get_documentation_service",
-            message="Failed to fetch documentation", 
-            metadata={"trace": traceback.format_exc()}
-            )
+            message="Failed to fetch documentation",
+            metadata={"trace": traceback.format_exc()},
+        )
         raise HTTPException(status_code=500, detail="Internal server error")

@@ -1,13 +1,13 @@
-import json
 import traceback
 from fastapi import HTTPException
-from models.unit_tests_model import UnitTests
+from builder.insights_builder import build_insights_graph
 from schemas.insights_schema import GenerateInsightsRequest
+from models.unit_tests_model import UnitTests
 from models.insights_model import Insights
 from utils.logger import log_event
-from graph.builder import build_insights_graph
 
 SERVICE_NAME = "insights_service"
+
 
 async def generate_insights_service(payload: GenerateInsightsRequest):
     try:
@@ -17,8 +17,8 @@ async def generate_insights_service(payload: GenerateInsightsRequest):
             level="INFO",
             service=SERVICE_NAME,
             function="generate_insights_service",
-            message="Insights generation started",
-            metadata={"unit_test_id": unit_test_id}
+            message="Starting insights generation",
+            metadata={"unit_test_id": unit_test_id},
         )
 
         tests_record = await UnitTests.filter(
@@ -29,86 +29,73 @@ async def generate_insights_service(payload: GenerateInsightsRequest):
         if not tests_record:
             raise HTTPException(
                 status_code=404,
-                detail="Unit test not found or unit test generation is not completed yet"
+                detail="Unit test not found or not completed"
             )
 
         code_record = tests_record.code
-        if not code_record:
-            raise HTTPException(status_code=404, detail="Generated code not found")
-
         requirement_record = code_record.requirement
-        if not requirement_record:
-            raise HTTPException(status_code=404, detail="Requirement session not found")
-
-        code_payload = getattr(code_record, "code_json", None)
-
-        if code_payload is None:
-            raise HTTPException(status_code=500, detail="Generated code payload is empty")
-
-        if isinstance(code_payload, dict):
-            code_content = (
-                code_payload.get("code")
-                or code_payload.get("source_code")
-                or code_payload.get("content")
-                or json.dumps(code_payload)
-            )
-        else:
-            code_content = str(code_payload)
-
-        tests_content = getattr(tests_record, "test_code", "") or ""
 
         graph = build_insights_graph()
 
-        result = await graph.ainvoke({
-            "user_input": {
-                "requirements": requirement_record.user_input,
-                "code": code_content,
-                "tests": tests_content
+        config = {
+            "configurable": {
+                "thread_id": f"insights-{unit_test_id}"
             }
-        })
+        }
 
-        response = result.get("ai_response")
+        result = await graph.ainvoke(
+            {
+                "requirements": requirement_record.user_input,
+                "code": code_record.code_json,
+                "test_code": tests_record.test_code,
+                "history": [],
+                "attempts": 0,
+                "messages": [],
+                "reasoning": [],
+                "retry_count": 0
+            },
+            config=config
+        )
 
-        insights_data = None
+        ai = result.get("insights", {})
 
-        if isinstance(response, dict):
-            insights_data = response
-
-        elif isinstance(response, str):
-            cleaned = response.strip().replace("```json", "").replace("```", "")
-
-            try:
-                insights_data = json.loads(cleaned)
-
-            except Exception:
-                log_event(
-                    level="ERROR",
-                    service=SERVICE_NAME,
-                    function="generate_insights_service",
-                    message="Failed to parse AI response for insights",
-                    metadata={"raw_response": cleaned}
-                )
-                raise HTTPException(status_code=500, detail="Invalid AI response format")
-
-        else:
-            raise HTTPException(status_code=500, detail="Invalid AI response type")
+        log_event(
+            level="INFO",
+            service=SERVICE_NAME,
+            function="generate_insights_service",
+            message="Insights data from state",
+            metadata={"ai_keys": list(ai.keys()) if ai else []},
+        )
 
         insight_obj = await Insights.create(
-            tests_id=unit_test_id,
-            is_completed=True,
-            **insights_data
+            tests=tests_record,
+            insights_summary=ai.get("insights_summary", ""),
+            key_insights=ai.get("key_insights", []),
+            missing_implementations=ai.get("missing_implementations", []),
+            code_quality_issues=ai.get("code_quality_issues", []),
+            security_issues=ai.get("security_issues", []),
+            scalability_problems=ai.get("scalability_problems", []),
+            refactoring_suggestions=ai.get("refactoring_suggestions", []),
+            dependencies=ai.get("dependencies", []),
+            recommendations=ai.get("recommendations", []),
+            is_completed=(result.get("status") == "valid"),
         )
 
         log_event(
             level="INFO",
             service=SERVICE_NAME,
             function="generate_insights_service",
-            message="Insights stored successfully",
-            metadata={"insight_id": insight_obj.id}
+            message="Insights record created",
+            metadata={
+                "insight_id": insight_obj.id,
+                "unit_test_id": unit_test_id,
+                "status": result.get("status"),
+            },
         )
 
         return {
             "insight_id": insight_obj.id,
+            "unit_test_id": unit_test_id,
             "insights_summary": insight_obj.insights_summary,
             "key_insights": insight_obj.key_insights,
             "missing_implementations": insight_obj.missing_implementations,
@@ -118,6 +105,9 @@ async def generate_insights_service(payload: GenerateInsightsRequest):
             "refactoring_suggestions": insight_obj.refactoring_suggestions,
             "dependencies": insight_obj.dependencies,
             "recommendations": insight_obj.recommendations,
+            "is_completed": insight_obj.is_completed,
+            "created_at": str(insight_obj.created_at) if insight_obj.created_at else None,
+            "status": result.get("status"),
         }
 
     except HTTPException:
@@ -128,37 +118,42 @@ async def generate_insights_service(payload: GenerateInsightsRequest):
             level="ERROR",
             service=SERVICE_NAME,
             function="generate_insights_service",
-            message="Insights generation failed",
-            metadata={"trace": traceback.format_exc()}
+            message="Insights generation crashed",
+            metadata={"trace": traceback.format_exc()},
         )
+
         raise HTTPException(status_code=500, detail="Internal server error")
+
 
 async def get_insights_service(insights_id: int):
     try:
         log_event(
-            level="INFO", 
-            service=SERVICE_NAME, 
+            level="INFO",
+            service=SERVICE_NAME,
             function="get_insights_service",
-            message="Fetching insights", 
-            metadata={"insights_id": insights_id}
-            )
+            message="Fetching insights",
+            metadata={"insights_id": insights_id},
+        )
 
-        insights = await Insights.get_or_none(id=insights_id)
+        insight = await Insights.get_or_none(id=insights_id)
 
-        if not insights:
+        if not insight:
             raise HTTPException(status_code=404, detail="Insights not found")
 
         return {
-            "insight_id": insights.id,
-            "insights_summary": insights.insights_summary,
-            "key_insights": insights.key_insights,
-            "missing_implementations": insights.missing_implementations,
-            "code_quality_issues": insights.code_quality_issues,
-            "security_issues": insights.security_issues,
-            "scalability_problems": insights.scalability_problems,
-            "refactoring_suggestions": insights.refactoring_suggestions,
-            "dependencies": insights.dependencies,
-            "recommendations": insights.recommendations,
+            "insight_id": insight.id,
+            "unit_test_id": insight.tests_id,
+            "insights_summary": insight.insights_summary,
+            "key_insights": insight.key_insights,
+            "missing_implementations": insight.missing_implementations,
+            "code_quality_issues": insight.code_quality_issues,
+            "security_issues": insight.security_issues,
+            "scalability_problems": insight.scalability_problems,
+            "refactoring_suggestions": insight.refactoring_suggestions,
+            "dependencies": insight.dependencies,
+            "recommendations": insight.recommendations,
+            "is_completed": insight.is_completed,
+            "created_at": str(insight.created_at) if insight.created_at else None,
         }
 
     except HTTPException:
@@ -166,10 +161,11 @@ async def get_insights_service(insights_id: int):
 
     except Exception:
         log_event(
-            level="ERROR", 
-            service=SERVICE_NAME, 
+            level="ERROR",
+            service=SERVICE_NAME,
             function="get_insights_service",
-            message="Failed to fetch insights", 
-            metadata={"trace": traceback.format_exc()}
-            )
+            message="Fetching insights failed",
+            metadata={"trace": traceback.format_exc()},
+        )
+
         raise HTTPException(status_code=500, detail="Internal server error")
