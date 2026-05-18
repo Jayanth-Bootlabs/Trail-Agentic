@@ -28,7 +28,6 @@ async def validate_node(state: GraphState) -> GraphState:
         )
 
         response = await llm.generate(prompt)
-
         parsed = clean_ai_response(response)
 
         history = state.get("history", [])
@@ -40,13 +39,8 @@ async def validate_node(state: GraphState) -> GraphState:
             "response": str(response)
         })
 
-        reasoning.append(
-            "Validation node executed"
-        )
-
-        messages.append(
-            "Validation completed"
-        )
+        reasoning.append("Validation node executed")
+        messages.append("Validation completed")
 
         if not parsed:
 

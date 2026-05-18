@@ -23,6 +23,8 @@ dependencies = [
     "python-dotenv (>=1.1.1,<1.2.0)",
     "passlib[bcrypt] (>=1.7.4,<2.0.0)",
     "bcrypt (==4.0.1)",
+    "streamlit (>=1.57.0,<2.0.0)",
+    "requests (>=2.34.0,<3.0.0)",
 ]
 
 
