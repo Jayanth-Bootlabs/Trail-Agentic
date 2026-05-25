@@ -20,3 +20,6 @@ class Insights(models.Model):
 
     class Meta:
         table = "insights"
+        indexes = [
+        ("tests_id", "is_completed", "created_at"),
+    ]

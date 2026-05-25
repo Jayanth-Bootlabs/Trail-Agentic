@@ -1,10 +1,12 @@
 import traceback
+import json
 from fastapi import HTTPException
 from builder.documentation_builder import build_documentation_graph
 from schemas.documentation_schema import GenerateDocumentationRequest
 from models.insights_model import Insights
 from models.documentation_model import Documentation
 from utils.logger import log_event
+from utils.cache import get_redis
 
 SERVICE_NAME = "documentation_service"
 
@@ -151,12 +153,33 @@ async def get_documentation_service(documentation_id: int):
             metadata={"documentation_id": documentation_id},
         )
 
+        # check cache first
+        redis = await get_redis()
+
+        if redis:
+            cache_key = f"documentation:{documentation_id}"
+            cached = await redis.get(cache_key)
+
+        cache_key = f"documentation:{documentation_id}"
+        cached = await redis.get(cache_key)
+
+        if cached:
+            log_event(
+                level="INFO",
+                service=SERVICE_NAME,
+                function="get_documentation_service",
+                message="Cache hit",
+                metadata={"documentation_id": documentation_id},
+            )
+            return json.loads(cached)
+
+        # cache miss — fetch from DB
         doc = await Documentation.get_or_none(id=documentation_id)
 
         if not doc:
             raise HTTPException(status_code=404, detail="Documentation not found")
 
-        return {
+        result = {
             "doc_id": doc.id,
             "insights_id": doc.insights_id,
             "overview": doc.overview,
@@ -171,6 +194,19 @@ async def get_documentation_service(documentation_id: int):
             "is_completed": doc.is_completed,
             "created_at": str(doc.created_at) if doc.created_at else None,
         }
+
+        # store in cache for 1 hour
+        await redis.set(cache_key, json.dumps(result), ex=3600)
+
+        log_event(
+            level="INFO",
+            service=SERVICE_NAME,
+            function="get_documentation_service",
+            message="Cache miss — stored in cache",
+            metadata={"documentation_id": documentation_id},
+        )
+
+        return result
 
     except HTTPException:
         raise

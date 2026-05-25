@@ -14,3 +14,6 @@ class UnitTests(models.Model):
 
     class Meta:
         table = "unit_tests"
+        indexes = [
+        ("code_id", "is_completed", "created_at"),
+    ]

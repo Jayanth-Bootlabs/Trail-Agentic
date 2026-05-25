@@ -11,10 +11,7 @@ SERVICE_NAME = "unit_test_routes"
 
 
 @router.post("/generate_unit_tests")
-async def generate_unit_tests(
-    request: Request,
-    payload: UnitTestRequest
-):
+async def generate_unit_tests(request: Request,payload: UnitTestRequest):
     log_event(
         level="INFO",
         service=SERVICE_NAME,
@@ -56,10 +53,7 @@ async def generate_unit_tests(
 
 
 @router.get("/get_unit_tests")
-async def get_unit_tests(
-    request: Request,
-    unit_test_id: int
-):
+async def get_unit_tests(request: Request,unit_test_id: int):
     log_event(
         level="INFO",
         service=SERVICE_NAME,

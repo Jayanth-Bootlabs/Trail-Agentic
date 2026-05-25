@@ -1,4 +1,5 @@
 import traceback
+
 from graph.state import GraphState
 from prompts.validation_prompt import get_validation_prompt
 from utils.gemini_llm import llm
@@ -28,6 +29,7 @@ async def validate_node(state: GraphState) -> GraphState:
         )
 
         response = await llm.generate(prompt)
+
         parsed = clean_ai_response(response)
 
         history = state.get("history", [])
@@ -39,8 +41,13 @@ async def validate_node(state: GraphState) -> GraphState:
             "response": str(response)
         })
 
-        reasoning.append("Validation node executed")
-        messages.append("Validation completed")
+        reasoning.append(
+            "Validation node executed"
+        )
+
+        messages.append(
+            "Validation completed"
+        )
 
         if not parsed:
 
@@ -54,8 +61,14 @@ async def validate_node(state: GraphState) -> GraphState:
                 },
             )
 
+            fallback_response = {
+                "status": "retry",
+                "message": "Invalid AI response"
+            }
+
             return {
                 **state,
+                "ai_response": fallback_response,
                 "status": "retry",
                 "history": history,
                 "reasoning": reasoning,
@@ -67,13 +80,19 @@ async def validate_node(state: GraphState) -> GraphState:
             "invalid"
         )
 
+        parsed["message"] = parsed.get(
+            "message",
+            "No response generated"
+        )
+
         log_event(
             level="INFO",
             service=SERVICE_NAME,
             function="validate_node",
             message="Validation node completed",
             metadata={
-                "status": parsed["status"]
+                "status": parsed["status"],
+                "message": parsed["message"]
             },
         )
 
@@ -162,7 +181,7 @@ async def clarification_node(state: GraphState) -> GraphState:
         "node": "clarification_node"
     })
 
-    ai_response = state.get("ai_response", {})
+    ai_response = state.get("ai_response") or {}
 
     clarification_message = ai_response.get(
         "message",
@@ -178,6 +197,9 @@ async def clarification_node(state: GraphState) -> GraphState:
         service=SERVICE_NAME,
         function="clarification_node",
         message="Clarification requested",
+        metadata={
+            "message": clarification_message
+        }
     )
 
     return {
@@ -203,7 +225,7 @@ async def rejection_node(state: GraphState) -> GraphState:
         "node": "rejection_node"
     })
 
-    ai_response = state.get("ai_response", {})
+    ai_response = state.get("ai_response") or {}
 
     rejection_message = ai_response.get(
         "message",
@@ -219,6 +241,9 @@ async def rejection_node(state: GraphState) -> GraphState:
         service=SERVICE_NAME,
         function="rejection_node",
         message="Request rejected",
+        metadata={
+            "message": rejection_message
+        }
     )
 
     return {

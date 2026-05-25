@@ -1,7 +1,8 @@
-from tortoise.contrib.fastapi import register_tortoise
-from utils.logger import log_event
 import os
 from dotenv import load_dotenv
+from tortoise import connections
+from tortoise.contrib.fastapi import register_tortoise
+from utils.logger import log_event
 
 load_dotenv()
 
@@ -28,14 +29,17 @@ def init_db(app):
     register_tortoise(
         app=app,
         db_url=DATABASE_URL,
-        modules={"models": ["models.users_model", "models.validation_model","models.unit_tests_model","models.insights_model", "models.documentation_model","models.code_model", "models.requirements_model", ]},
+        modules={
+            "models": [
+                "models.users_model",
+                "models.validation_model",
+                "models.unit_tests_model",
+                "models.insights_model",
+                "models.documentation_model",
+                "models.code_model",
+                "models.requirements_model",
+            ]
+        },
         generate_schemas=True,
         add_exception_handlers=True,
-    )
-
-    log_event(
-        level="INFO",
-        service=SERVICE_NAME,
-        function="init_db",
-        message="Database initialized successfully",
     )

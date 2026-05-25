@@ -1,19 +1,39 @@
 import os
+from contextlib import asynccontextmanager
+
 from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.sessions import SessionMiddleware
-from database.connection import init_db
+
 from middleware.middleware import UserTypeMiddleware
-from routes import user_routes,validation_routes,code_routes,unit_test_routes,insights_routes,documentation_routes, requirements_routes
+from utils.cache import init_redis
+from database.connection import init_db
+from routes import (
+    user_routes,
+    validation_routes,
+    code_routes,
+    unit_test_routes,
+    insights_routes,
+    documentation_routes,
+    requirements_routes,
+)
 
 load_dotenv(override=True)
 
-SERVICE_NAME = "main_app"
-
-app = FastAPI(title="AI Multi-Agent System")
-
 ENCRYPTION_KEY = os.getenv("ENCRYPTION_KEY", "default_secret")
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    await init_redis()
+    yield
+
+
+app = FastAPI(
+    title="AI Multi-Agent System",
+    lifespan=lifespan,
+)
 
 app.add_middleware(
     SessionMiddleware,
@@ -35,9 +55,11 @@ app.add_middleware(
 
 init_db(app)
 
+
 @app.get("/health")
 async def health_check():
     return {"status": "ok"}
+
 
 app.include_router(user_routes.router)
 app.include_router(validation_routes.router)

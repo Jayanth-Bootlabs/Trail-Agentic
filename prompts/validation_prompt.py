@@ -37,11 +37,11 @@ Examples:
 
 Input: Build HR app 500 employees payroll attendance
 Output:
-{{"status":"valid","message":"Good request"}}
+{{"status":"valid","message":"Valid request"}}
 
 Input: Build ecommerce mobile grocery app with Razorpay
 Output:
-{{"status":"valid","message":"Good request"}}
+{{"status":"valid","message":"Valid request"}}
 
 Input: Build app
 Output:
@@ -58,6 +58,106 @@ Output:
 Input: hello
 Output:
 {{"status":"invalid","message":"Please describe the software or app you need."}}
+
+Input: Build a frontend for Library management system
+Output:
+{{"status":"clarify","message":"Please mention the frameworks."}}
+
+Input: Build a site for food delivery
+Output:
+{{"status":"clarify","message":"Please mention the frameworks."}}
+
+Input: Build a full stack application for school management system using Html,css,react for frontend
+Output:
+{{"status":"clarify","message":"Please mention the backend framework"}}
+
+Input: Build a backend for ecommerce system
+Output:
+{{"status":"clarify","message":"Please mention the backend framework and database requirements."}}
+
+Input: Build a frontend for hospital management system
+Output:
+{{"status":"clarify","message":"Please mention the frontend framework or technologies."}}
+
+Input: Build a full stack CRM application
+Output:
+{{"status":"clarify","message":"Please mention the frontend and backend technologies you want to use."}}
+
+Input: Build a school management system using React
+Output:
+{{"status":"clarify","message":"Please mention the backend framework and database requirements."}}
+
+Input: Build a task manager using FastAPI
+Output:
+{{"status":"clarify","message":"Please mention the database and whether frontend is required."}}
+
+Input: Build a food delivery app using React and Node.js
+Output:
+{{"status":"clarify","message":"Please mention the database and whether this should include payment integration."}}
+
+Input: Build a chat application using Next.js and Firebase
+Output:
+{{"status":"valid","message":"Valid request"}}
+
+Input: Build a banking application using React, FastAPI and PostgreSQL
+Output:
+{{"status":"valid","message":"Valid request"}}
+
+Input: Build an inventory management system using Spring Boot and MySQL
+Output:
+{{"status":"valid","message":"Valid request"}}
+
+Input: Build a portfolio website using HTML, CSS and JavaScript
+Output:
+{{"status":"valid","message":"Valid request"}}
+
+Input: Build a ride booking application
+Output:
+{{"status":"clarify","message":"Please mention whether you need frontend, backend or full stack application and specify preferred technologies."}}
+
+Input: Build a social media platform using React
+Output:
+{{"status":"clarify","message":"Please mention the backend framework, database and authentication requirements."}}
+
+Input: Build an AI chatbot application
+Output:
+{{"status":"clarify","message":"Please mention the frameworks, LLM provider and whether frontend is required."}}
+
+Input: Create website
+Output:
+{{"status":"clarify","message":"Please describe the type of website and required features."}}
+
+Input: build
+Output:
+{{"status":"invalid","message":"Please enter a meaningful software project request."}}
+
+Input: 123456
+Output:
+{{"status":"invalid","message":"Please enter a valid software or application request."}}
+
+Input: random text testing
+Output:
+{{"status":"invalid","message":"Please describe the software system you want to build."}}
+
+Input: Build a movie recommendation system using Python, FastAPI, React and PostgreSQL
+Output:
+{{"status":"valid","message":"Valid request"}}
+
+Input: Build a blogging platform using Django
+Output:
+{{"status":"clarify","message":"Please mention whether frontend templates or separate frontend framework is needed and specify database requirements."}}
+
+Input: Build a REST API for employee management using Node.js and MongoDB
+Output:
+{{"status":"valid","message":"Valid request"}}
+
+Input: Build a weather app using Vue.js
+Output:
+{{"status":"clarify","message":"Please mention whether backend integration or external weather APIs are required."}}
+
+Input: Build a full stack ecommerce application using React, FastAPI and PostgreSQL with Razorpay integration
+Output:
+{{"status":"valid","message":"Valid request"}}
 
 User Input:
 {user_input}

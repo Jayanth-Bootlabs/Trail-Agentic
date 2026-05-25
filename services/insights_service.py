@@ -1,10 +1,12 @@
 import traceback
+import json
 from fastapi import HTTPException
 from builder.insights_builder import build_insights_graph
 from schemas.insights_schema import GenerateInsightsRequest
 from models.unit_tests_model import UnitTests
 from models.insights_model import Insights
 from utils.logger import log_event
+from utils.cache import get_redis
 
 SERVICE_NAME = "insights_service"
 
@@ -135,12 +137,33 @@ async def get_insights_service(insights_id: int):
             metadata={"insights_id": insights_id},
         )
 
+        # check cache first
+        redis = await get_redis()
+
+        if redis:
+            cache_key = f"insights:{insights_id}"
+            cached = await redis.get(cache_key)
+            
+        cache_key = f"insights:{insights_id}"
+        cached = await redis.get(cache_key)
+
+        if cached:
+            log_event(
+                level="INFO",
+                service=SERVICE_NAME,
+                function="get_insights_service",
+                message="Cache hit",
+                metadata={"insights_id": insights_id},
+            )
+            return json.loads(cached)
+
+        # cache miss — fetch from DB
         insight = await Insights.get_or_none(id=insights_id)
 
         if not insight:
             raise HTTPException(status_code=404, detail="Insights not found")
 
-        return {
+        result = {
             "insight_id": insight.id,
             "unit_test_id": insight.tests_id,
             "insights_summary": insight.insights_summary,
@@ -156,6 +179,19 @@ async def get_insights_service(insights_id: int):
             "created_at": str(insight.created_at) if insight.created_at else None,
         }
 
+        # store in cache for 1 hour
+        await redis.set(cache_key, json.dumps(result), ex=3600)
+
+        log_event(
+            level="INFO",
+            service=SERVICE_NAME,
+            function="get_insights_service",
+            message="Cache miss — stored in cache",
+            metadata={"insights_id": insights_id},
+        )
+
+        return result
+
     except HTTPException:
         raise
 
@@ -167,5 +203,4 @@ async def get_insights_service(insights_id: int):
             message="Fetching insights failed",
             metadata={"trace": traceback.format_exc()},
         )
-
         raise HTTPException(status_code=500, detail="Internal server error")

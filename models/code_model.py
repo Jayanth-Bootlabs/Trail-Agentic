@@ -12,3 +12,6 @@ class GeneratedCode(models.Model):
 
     class Meta:
         table = "generated_code"
+        indexes = [
+        ("requirement_id", "is_completed", "created_at"),
+    ]

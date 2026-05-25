@@ -10,10 +10,7 @@ SERVICE_NAME = "documentation_routes"
 
 
 @router.post("/generate_documentation")
-async def generate_documentation(
-    request: Request,
-    payload: GenerateDocumentationRequest
-):
+async def generate_documentation(request: Request,payload: GenerateDocumentationRequest):
     log_event(
         level="INFO",
         service=SERVICE_NAME,
@@ -49,10 +46,7 @@ async def generate_documentation(
 
 
 @router.get("/get_documentation")
-async def get_documentation(
-    request: Request,
-    documentation_id: int
-):
+async def get_documentation(request: Request,documentation_id: int):
     log_event(
         level="INFO",
         service=SERVICE_NAME,
