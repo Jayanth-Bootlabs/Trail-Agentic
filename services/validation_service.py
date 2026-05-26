@@ -144,12 +144,7 @@ async def continue_prompt_request(payload, user):
 
         user_reply = payload.user_reply.strip()
 
-        combined_input = f"""
-{previous_input}
-
-Additional Clarification:
-{user_reply}
-""".strip()
+        combined_input = previous_input + ' ' + user_reply
 
         graph = build_validation_graph()
 
