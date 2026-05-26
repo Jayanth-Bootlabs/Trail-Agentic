@@ -10,10 +10,7 @@ SERVICE_NAME = "code_routes"
 
 
 @router.post("/generate_code")
-async def generate_code(
-    request: Request,
-    payload: CodeGenerationRequest
-):
+async def generate_code(request: Request,payload: CodeGenerationRequest):
     log_event(
         level="INFO",
         service=SERVICE_NAME,
@@ -49,10 +46,7 @@ async def generate_code(
 
 
 @router.get("/get_code")
-async def get_code(
-    request: Request,
-    code_id: int
-):
+async def get_code(request: Request,code_id: int):
     log_event(
         level="INFO",
         service=SERVICE_NAME,

@@ -14,3 +14,6 @@ class RequirementSession(models.Model):
 
     class Meta:
         table = "requirements"
+        indexes = [
+        ("validation_session_id", "is_completed", "created_at"),
+    ]

@@ -5,6 +5,7 @@ from fastapi import HTTPException
 from schemas.user_schema import CreateUserRequest, UpdateUserRequest, LoginRequest
 from utils.helper import hash_password, verify_password
 
+
 SERVICE_NAME = "user_service"
 
 async def create_user_service(payload: CreateUserRequest):
@@ -130,6 +131,7 @@ async def get_user_service(user_id: int):
             stack_trace=traceback.format_exc(),
         )
         raise HTTPException(status_code=500, detail="Internal server error")
+
 
 async def update_user_service(user_id: int, payload: UpdateUserRequest):
     try:

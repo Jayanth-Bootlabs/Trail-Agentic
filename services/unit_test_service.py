@@ -1,10 +1,13 @@
 import traceback
+import json
 from fastapi import HTTPException
 from builder.unit_test_builder import build_unit_test_graph
 from schemas.unit_test_schema import UnitTestRequest
 from models.code_model import GeneratedCode
 from models.unit_tests_model import UnitTests
 from utils.logger import log_event
+from utils.cache import get_redis
+
 
 SERVICE_NAME = "unit_test_service"
 
@@ -113,12 +116,34 @@ async def get_unit_tests_service(unit_test_id: int):
             metadata={"unit_test_id": unit_test_id},
         )
 
+        # check cache first
+        redis = await get_redis()
+
+        if redis:
+            cache_key = f"unit_test:{unit_test_id}"
+            cached = await redis.get(cache_key)
+
+
+        cache_key = f"unit_tests:{unit_test_id}"
+        cached = await redis.get(cache_key)
+
+        if cached:
+            log_event(
+                level="INFO",
+                service=SERVICE_NAME,
+                function="get_unit_tests_service",
+                message="Cache hit",
+                metadata={"unit_test_id": unit_test_id},
+            )
+            return json.loads(cached)
+
+        # cache miss — fetch from DB
         test_record = await UnitTests.get_or_none(id=unit_test_id)
 
         if not test_record:
             raise HTTPException(status_code=404, detail="Unit tests not found")
 
-        return {
+        result = {
             "unit_test_id": test_record.id,
             "code_id": test_record.code_id,
             "test_code": test_record.test_code or "",
@@ -126,6 +151,19 @@ async def get_unit_tests_service(unit_test_id: int):
             "frameworks_used": test_record.frameworks_used or [],
             "created_at": str(test_record.created_at) if test_record.created_at else None,
         }
+
+        # store in cache for 1 hour
+        await redis.set(cache_key, json.dumps(result), ex=3600)
+
+        log_event(
+            level="INFO",
+            service=SERVICE_NAME,
+            function="get_unit_tests_service",
+            message="Cache miss — stored in cache",
+            metadata={"unit_test_id": unit_test_id},
+        )
+
+        return result
 
     except HTTPException:
         raise
@@ -138,8 +176,4 @@ async def get_unit_tests_service(unit_test_id: int):
             message="Fetching unit tests failed",
             metadata={"trace": traceback.format_exc()},
         )
-
-        raise HTTPException(
-            status_code=500,
-            detail="Internal server error"
-        )
+        raise HTTPException(status_code=500, detail="Internal server error")

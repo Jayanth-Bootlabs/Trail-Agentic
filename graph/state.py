@@ -10,9 +10,11 @@ class GraphState(TypedDict, total=False):
     reasoning: List[str]
     attempts: int
 
-    
     user_name: str 
     user_input: Any
+
+    ai_response: Dict[str, Any]
+
     requirements: Any
     code: Any
     test_code: Any

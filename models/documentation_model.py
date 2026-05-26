@@ -20,3 +20,6 @@ class Documentation(models.Model):
 
     class Meta:
         table = "documentation"
+        indexes = [
+        ("insights_id", "is_completed", "created_at"),
+    ]

@@ -1,10 +1,12 @@
 import traceback
+import json
 from fastapi import HTTPException
 from builder.code_builder import build_code_graph
 from schemas.code_schema import CodeGenerationRequest
 from models.requirements_model import RequirementSession
 from models.code_model import GeneratedCode
 from utils.logger import log_event
+from utils.cache import get_redis
 
 SERVICE_NAME = "code_generation_service"
 
@@ -123,6 +125,28 @@ async def get_generated_code_service(code_id: int):
             metadata={"code_id": code_id},
         )
 
+        # check cache first
+        redis = await get_redis()
+
+        if redis:
+            cache_key = f"code:{code_id}"
+            cached = await redis.get(cache_key)
+
+
+        cache_key = f"code:{code_id}"
+        cached = await redis.get(cache_key)
+
+        if cached:
+            log_event(
+                level="INFO",
+                service=SERVICE_NAME,
+                function="get_generated_code_service",
+                message="Cache hit",
+                metadata={"code_id": code_id},
+            )
+            return json.loads(cached)
+
+        # cache miss — fetch from DB
         code_record = await GeneratedCode.get_or_none(id=code_id)
 
         if not code_record:
@@ -130,7 +154,7 @@ async def get_generated_code_service(code_id: int):
 
         code_data = code_record.code_json or {}
 
-        return {
+        result = {
             "code_id": code_record.id,
             "requirements_id": code_record.requirement_id,
             "project_title": code_data.get("project_title", ""),
@@ -140,6 +164,19 @@ async def get_generated_code_service(code_id: int):
             "is_completed": code_record.is_completed,
             "created_at": str(code_record.created_at) if code_record.created_at else None,
         }
+
+        # store in cache for 1 hour
+        await redis.set(cache_key, json.dumps(result), ex=3600)
+
+        log_event(
+            level="INFO",
+            service=SERVICE_NAME,
+            function="get_generated_code_service",
+            message="Cache miss — stored in cache",
+            metadata={"code_id": code_id},
+        )
+
+        return result
 
     except HTTPException:
         raise

@@ -11,10 +11,7 @@ SERVICE_NAME = "requirements_routes"
 
 
 @router.post("/generate_requirements")
-async def start_requirements(
-    request: Request,
-    payload: StartRequirementRequest
-):
+async def start_requirements(request: Request,payload: StartRequirementRequest):
     log_event(
         level="INFO",
         service=SERVICE_NAME,

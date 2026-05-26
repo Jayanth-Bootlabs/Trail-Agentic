@@ -11,3 +11,6 @@ class Users(models.Model):
 
     class Meta:
         table = "users"
+        indexes = [
+            ("email", "is_active"),  
+        ]

@@ -14,10 +14,7 @@ SERVICE_NAME = "insights_routes"
 
 
 @router.post("/generate_insights")
-async def generate_insights(
-    request: Request,
-    payload: GenerateInsightsRequest
-):
+async def generate_insights(request: Request,payload: GenerateInsightsRequest):
     log_event(
         level="INFO",
         service=SERVICE_NAME,
@@ -59,10 +56,7 @@ async def generate_insights(
 
 
 @router.get("/get_insights")
-async def get_insights(
-    request: Request,
-    insights_id: int
-):
+async def get_insights(request: Request,insights_id: int):
     log_event(
         level="INFO",
         service=SERVICE_NAME,

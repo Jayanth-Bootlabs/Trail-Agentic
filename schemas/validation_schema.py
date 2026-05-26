@@ -6,3 +6,5 @@ class ValidateRequest(BaseModel):
 class ContinueRequest(BaseModel):
     session_id: int
     user_reply: str
+
+
