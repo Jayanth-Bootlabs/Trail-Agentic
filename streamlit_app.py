@@ -1,10 +1,12 @@
-# poetry run streamlit run streamlit_app.py
-
-import streamlit as st
-import requests
+import json
 from typing import Optional, Dict, Any
 
+import requests
+import streamlit as st
+
+
 BASE_URL = "http://localhost:8000"
+
 
 # =========================================================
 # SESSION
@@ -80,6 +82,151 @@ def extract_data(response: dict) -> dict:
 
 
 # =========================================================
+# RENDER HELPERS
+# =========================================================
+
+def detect_language(filename: str):
+
+    extension_map = {
+        ".py": "python",
+        ".js": "javascript",
+        ".ts": "typescript",
+        ".html": "html",
+        ".css": "css",
+        ".json": "json",
+        ".md": "markdown",
+        ".sql": "sql",
+        ".yaml": "yaml",
+        ".yml": "yaml",
+    }
+
+    for ext, lang in extension_map.items():
+
+        if filename.endswith(ext):
+            return lang
+
+    return "text"
+
+
+def render_source_code(source_code: dict):
+
+    st.subheader("📁 Generated Files")
+
+    for file_path, code in source_code.items():
+
+        language = detect_language(file_path)
+
+        with st.expander(f"📄 {file_path}", expanded=False):
+
+            st.code(
+                code,
+                language=language
+            )
+
+
+def render_unit_test(test_code: str):
+
+    st.subheader("🧪 Generated Unit Tests")
+
+    st.code(
+        test_code,
+        language="python"
+    )
+
+
+def render_documentation(documentation: str):
+
+    st.subheader("📘 Documentation")
+
+    st.markdown(documentation)
+
+
+def render_generic_json(data):
+
+    st.json(data)
+
+
+def render_response(data: dict):
+
+    if not isinstance(data, dict):
+        st.write(data)
+        return
+
+    # =====================================================
+    # CODE AGENT RESPONSE
+    # =====================================================
+
+    if "source_code" in data:
+
+        st.success("Code generated successfully")
+
+        col1, col2 = st.columns(2)
+
+        with col1:
+            st.metric("Code ID", data.get("code_id"))
+
+        with col2:
+            st.metric(
+                "Requirements ID",
+                data.get("requirements_id")
+            )
+
+        if data.get("project_title"):
+            st.subheader("📦 Project")
+            st.write(data.get("project_title"))
+
+        if data.get("tech_stack"):
+
+            st.subheader("🛠️ Tech Stack")
+
+            for tech in data.get("tech_stack", []):
+                st.badge(tech)
+
+        render_source_code(
+            data.get("source_code", {})
+        )
+
+        return
+
+    # =====================================================
+    # UNIT TEST RESPONSE
+    # =====================================================
+
+    if "test_code" in data:
+
+        st.success("Unit tests generated")
+
+        st.write(
+            f"Frameworks Used: "
+            f"{', '.join(data.get('frameworks_used', []))}"
+        )
+
+        render_unit_test(
+            data.get("test_code", "")
+        )
+
+        return
+
+    # =====================================================
+    # DOCUMENTATION RESPONSE
+    # =====================================================
+
+    if "documentation" in data:
+
+        render_documentation(
+            data.get("documentation")
+        )
+
+        return
+
+    # =====================================================
+    # DEFAULT
+    # =====================================================
+
+    render_generic_json(data)
+
+
+# =========================================================
 # LOGIN
 # =========================================================
 
@@ -115,6 +262,7 @@ with st.sidebar:
     if not st.session_state.get("logged_in"):
 
         email = st.text_input("Email")
+
         password = st.text_input(
             "Password",
             type="password"
@@ -128,6 +276,7 @@ with st.sidebar:
                 st.rerun()
 
             else:
+
                 st.error("Login failed")
 
     else:
@@ -186,7 +335,7 @@ with tab_agents:
     st.markdown("---")
 
     # =====================================================
-    # VALIDATION AGENT
+    # VALIDATION
     # =====================================================
 
     if agent == "Validation":
@@ -217,8 +366,9 @@ with tab_agents:
                     st.session_state.validation_response = data
 
                     if data.get("session_id"):
-                        st.session_state.validation_session_id = data.get(
-                            "session_id"
+
+                        st.session_state.validation_session_id = (
+                            data.get("session_id")
                         )
 
                     st.rerun()
@@ -229,17 +379,11 @@ with tab_agents:
 
         if validation_data:
 
-            st.json(validation_data)
+            render_response(validation_data)
 
             status = validation_data.get("status")
 
-            # ---------------- CLARIFY ----------------
-
             if status == "clarify":
-
-                st.warning(
-                    validation_data.get("message")
-                )
 
                 clarification = st.text_area(
                     "Provide clarification",
@@ -275,39 +419,10 @@ with tab_agents:
                                 continue_data
                             )
 
-                            if continue_data.get(
-                                "session_id"
-                            ):
-                                st.session_state.validation_session_id = (
-                                    continue_data.get(
-                                        "session_id"
-                                    )
-                                )
-
                             st.rerun()
 
-            # ---------------- VALID ----------------
-
-            elif status == "valid":
-
-                st.success("Validation successful")
-
-                st.info(
-                    f"Use validation_session_id = "
-                    f"{validation_data.get('session_id')} "
-                    f"in Requirements Agent"
-                )
-
-            # ---------------- INVALID ----------------
-
-            elif status == "invalid":
-
-                st.error(
-                    validation_data.get("message")
-                )
-
     # =====================================================
-    # REQUIREMENTS AGENT
+    # REQUIREMENTS
     # =====================================================
 
     elif agent == "Requirements":
@@ -321,8 +436,7 @@ with tab_agents:
             value=st.session_state.get(
                 "validation_session_id",
                 1
-            ),
-            key="requirements_validation_id"
+            )
         )
 
         if st.button("Generate Requirements"):
@@ -344,7 +458,7 @@ with tab_agents:
 
                     data = extract_data(res)
 
-                    st.json(data)
+                    render_response(data)
 
                     requirement_id = data.get(
                         "requirement_session_id"
@@ -356,19 +470,8 @@ with tab_agents:
                             requirement_id
                         )
 
-                        st.success(
-                            f"requirement_session_id = "
-                            f"{requirement_id}"
-                        )
-
-        st.markdown("---")
-
-        st.info(
-            "Requirements GET endpoint not available"
-        )
-
     # =====================================================
-    # CODE AGENT
+    # CODE
     # =====================================================
 
     elif agent == "Code":
@@ -382,8 +485,7 @@ with tab_agents:
             value=st.session_state.get(
                 "requirement_id",
                 1
-            ),
-            key="code_requirement_id"
+            )
         )
 
         if st.button("Generate Code"):
@@ -403,17 +505,13 @@ with tab_agents:
 
                     data = extract_data(gen)
 
-                    st.json(data)
+                    render_response(data)
 
                     code_id = data.get("code_id")
 
                     if code_id:
 
                         st.session_state.code_id = code_id
-
-                        st.success(
-                            f"code_id = {code_id}"
-                        )
 
         st.markdown("---")
 
@@ -426,8 +524,7 @@ with tab_agents:
             value=st.session_state.get(
                 "code_id",
                 1
-            ),
-            key="fetch_code_id"
+            )
         )
 
         if st.button("Fetch Code"):
@@ -446,15 +543,15 @@ with tab_agents:
 
                     data = extract_data(res)
 
-                    st.json(data)
+                    render_response(data)
 
     # =====================================================
-    # UNIT TESTS AGENT
+    # UNIT TESTS
     # =====================================================
 
     elif agent == "Unit Tests":
 
-        st.subheader("📝 Generate Unit Tests")
+        st.subheader("🧪 Generate Unit Tests")
 
         code_id = st.number_input(
             "code_id",
@@ -463,8 +560,7 @@ with tab_agents:
             value=st.session_state.get(
                 "code_id",
                 1
-            ),
-            key="unit_test_code_id"
+            )
         )
 
         if st.button("Generate Unit Tests"):
@@ -485,58 +581,7 @@ with tab_agents:
 
                     data = extract_data(gen)
 
-                    st.json(data)
-
-                    unit_test_id = data.get(
-                        "unit_test_id"
-                    )
-
-                    if unit_test_id:
-
-                        st.session_state.unit_test_id = (
-                            unit_test_id
-                        )
-
-                        st.success(
-                            f"unit_test_id = "
-                            f"{unit_test_id}"
-                        )
-
-        st.markdown("---")
-
-        st.subheader("🔍 Fetch Unit Tests")
-
-        fetch_ut_id = st.number_input(
-            "unit_test_id",
-            min_value=1,
-            step=1,
-            value=st.session_state.get(
-                "unit_test_id",
-                1
-            ),
-            key="fetch_unit_test_id"
-        )
-
-        if st.button("Fetch Unit Tests"):
-
-            with st.spinner(
-                "Fetching unit tests..."
-            ):
-
-                res = api_call(
-                    "GET",
-                    "/get_unit_tests",
-                    {
-                        "unit_test_id":
-                        fetch_ut_id
-                    }
-                )
-
-                if res:
-
-                    data = extract_data(res)
-
-                    st.json(data)
+                    render_response(data)
 
     # =====================================================
     # INSIGHTS AGENT

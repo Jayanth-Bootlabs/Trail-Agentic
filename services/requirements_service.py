@@ -38,7 +38,7 @@ async def start_requirements_request(payload: StartRequirementRequest, user):
                 detail="Validation is not completed successfully"
             )
 
-        user_input = validation.user_input
+        user_input = validation.combined_input
 
         graph = build_requirements_graph()
 
