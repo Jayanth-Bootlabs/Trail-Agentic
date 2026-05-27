@@ -32,23 +32,6 @@ async def validate_node(state: GraphState) -> GraphState:
 
         parsed = clean_ai_response(response)
 
-        history = state.get("history", [])
-        reasoning = state.get("reasoning", [])
-        messages = state.get("messages", [])
-
-        history.append({
-            "node": "validate_node",
-            "response": str(response)
-        })
-
-        reasoning.append(
-            "Validation node executed"
-        )
-
-        messages.append(
-            "Validation completed"
-        )
-
         if not parsed:
 
             log_event(
@@ -70,9 +53,6 @@ async def validate_node(state: GraphState) -> GraphState:
                 **state,
                 "ai_response": fallback_response,
                 "status": "retry",
-                "history": history,
-                "reasoning": reasoning,
-                "messages": messages,
             }
 
         parsed["status"] = parsed.get(
@@ -100,9 +80,6 @@ async def validate_node(state: GraphState) -> GraphState:
             **state,
             "ai_response": parsed,
             "status": parsed["status"],
-            "history": history,
-            "reasoning": reasoning,
-            "messages": messages,
         }
 
     except Exception:
@@ -127,24 +104,7 @@ async def retry_node(state: GraphState) -> GraphState:
         message="Retry node started",
     )
 
-    history = state.get("history", [])
-    reasoning = state.get("reasoning", [])
-    messages = state.get("messages", [])
-
     retry_count = state.get("retry_count", 0) + 1
-
-    history.append({
-        "node": "retry_node",
-        "attempt": retry_count
-    })
-
-    reasoning.append(
-        "Retrying validation"
-    )
-
-    messages.append(
-        f"Retry attempt {retry_count}"
-    )
 
     log_event(
         level="INFO",
@@ -159,9 +119,6 @@ async def retry_node(state: GraphState) -> GraphState:
     return {
         **state,
         "retry_count": retry_count,
-        "history": history,
-        "reasoning": reasoning,
-        "messages": messages,
     }
 
 
@@ -174,23 +131,7 @@ async def clarification_node(state: GraphState) -> GraphState:
         message="Clarification node started",
     )
 
-    history = state.get("history", [])
-    messages = state.get("messages", [])
-
-    history.append({
-        "node": "clarification_node"
-    })
-
     ai_response = state.get("ai_response") or {}
-
-    clarification_message = ai_response.get(
-        "message",
-        "More information is required"
-    )
-
-    messages.append(
-        clarification_message
-    )
 
     log_event(
         level="INFO",
@@ -204,8 +145,6 @@ async def clarification_node(state: GraphState) -> GraphState:
 
     return {
         **state,
-        "history": history,
-        "messages": messages,
     }
 
 
@@ -218,23 +157,7 @@ async def rejection_node(state: GraphState) -> GraphState:
         message="Rejection node started",
     )
 
-    history = state.get("history", [])
-    messages = state.get("messages", [])
-
-    history.append({
-        "node": "rejection_node"
-    })
-
     ai_response = state.get("ai_response") or {}
-
-    rejection_message = ai_response.get(
-        "message",
-        "Request rejected"
-    )
-
-    messages.append(
-        rejection_message
-    )
 
     log_event(
         level="INFO",
@@ -248,6 +171,4 @@ async def rejection_node(state: GraphState) -> GraphState:
 
     return {
         **state,
-        "history": history,
-        "messages": messages,
     }

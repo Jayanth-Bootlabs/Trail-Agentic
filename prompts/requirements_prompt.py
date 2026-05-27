@@ -17,12 +17,6 @@ STRICT OUTPUT (JSON ONLY):
     "project_name": "",
     "domain": "",
     "platform": "",
-    "users": [
-      {{
-        "name": "{user_name}",
-        "description": "description of the user role"
-      }}
-    ],
     "requirements": [],
     "assumptions": []
   }}

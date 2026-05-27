@@ -45,10 +45,6 @@ async def generate_code_service(payload: CodeGenerationRequest):
         result = await graph.ainvoke(
             {
                 "user_input": requirement.user_input,
-                "history": [],
-                "attempts": 0,
-                "messages": [],
-                "reasoning": [],
                 "retry_count": 0
             },
             config=config

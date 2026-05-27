@@ -36,18 +36,6 @@ async def code_node(state: GraphState) -> GraphState:
             metadata={"parsed_keys": list(parsed.keys()) if parsed else []},
         )
 
-        history = state.get("history", [])
-        reasoning = state.get("reasoning", [])
-        messages = state.get("messages", [])
-
-        history.append({
-            "node": "code_node",
-            "response": str(response)
-        })
-
-        reasoning.append("Code node executed")
-        messages.append("Code generation completed")
-
         if not parsed:
 
             log_event(
@@ -63,9 +51,6 @@ async def code_node(state: GraphState) -> GraphState:
             return {
                 **state,
                 "status": "retry",
-                "history": history,
-                "reasoning": reasoning,
-                "messages": messages,
             }
 
         raw_status = parsed.get("status", "invalid")
@@ -84,9 +69,6 @@ async def code_node(state: GraphState) -> GraphState:
             **state,
             "code": parsed,
             "status": normalized_status,
-            "history": history,
-            "reasoning": reasoning,
-            "messages": messages,
         }
 
     except Exception:
@@ -110,19 +92,7 @@ async def retry_node(state: GraphState) -> GraphState:
         message="Retry node started",
     )
 
-    history = state.get("history", [])
-    reasoning = state.get("reasoning", [])
-    messages = state.get("messages", [])
-
     retry_count = state.get("retry_count", 0) + 1
-
-    history.append({
-        "node": "retry_node",
-        "attempt": retry_count
-    })
-
-    reasoning.append("Retrying code generation")
-    messages.append(f"Retry attempt {retry_count}")
 
     log_event(
         level="INFO",
@@ -135,7 +105,4 @@ async def retry_node(state: GraphState) -> GraphState:
     return {
         **state,
         "retry_count": retry_count,
-        "history": history,
-        "reasoning": reasoning,
-        "messages": messages,
     }
