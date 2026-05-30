@@ -32,6 +32,10 @@ async def validate_node(state: GraphState) -> GraphState:
 
         parsed = clean_ai_response(response)
 
+        messages = state.get("messages", [])
+
+        messages.append("Validation completed")
+
         if not parsed:
 
             log_event(
@@ -53,6 +57,7 @@ async def validate_node(state: GraphState) -> GraphState:
                 **state,
                 "ai_response": fallback_response,
                 "status": "retry",
+                "messages": messages,
             }
 
         parsed["status"] = parsed.get(
@@ -80,6 +85,7 @@ async def validate_node(state: GraphState) -> GraphState:
             **state,
             "ai_response": parsed,
             "status": parsed["status"],
+            "messages": messages,
         }
 
     except Exception:
@@ -104,7 +110,12 @@ async def retry_node(state: GraphState) -> GraphState:
         message="Retry node started",
     )
 
+    messages = state.get("messages", [])
+
+
     retry_count = state.get("retry_count", 0) + 1
+
+    messages.append(f"Retry attempt {retry_count}")
 
     log_event(
         level="INFO",
@@ -119,6 +130,7 @@ async def retry_node(state: GraphState) -> GraphState:
     return {
         **state,
         "retry_count": retry_count,
+        "messages": messages,
     }
 
 
@@ -131,7 +143,17 @@ async def clarification_node(state: GraphState) -> GraphState:
         message="Clarification node started",
     )
 
+    messages = state.get("messages", [])
+
     ai_response = state.get("ai_response") or {}
+
+    clarification_message = ai_response.get(
+        "message",
+        "More information is required"
+    )
+
+    messages.append(clarification_message)
+
 
     log_event(
         level="INFO",
@@ -145,6 +167,7 @@ async def clarification_node(state: GraphState) -> GraphState:
 
     return {
         **state,
+        "messages": messages,
     }
 
 
@@ -156,8 +179,18 @@ async def rejection_node(state: GraphState) -> GraphState:
         function="rejection_node",
         message="Rejection node started",
     )
+    
+    
+    messages = state.get("messages", [])
 
     ai_response = state.get("ai_response") or {}
+
+    rejection_message = ai_response.get(
+        "message",
+        "Request rejected"
+    )
+
+    messages.append(rejection_message)
 
     log_event(
         level="INFO",
@@ -171,4 +204,5 @@ async def rejection_node(state: GraphState) -> GraphState:
 
     return {
         **state,
+        "messages": messages,
     }

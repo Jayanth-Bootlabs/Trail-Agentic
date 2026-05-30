@@ -6,6 +6,7 @@ class GraphState(TypedDict, total=False):
     error: Optional[str]
     retry_count: int
     user_input: Any
+    messages: List[str]
 
     ai_response: Dict[str, Any]
 
