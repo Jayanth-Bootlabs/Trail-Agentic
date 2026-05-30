@@ -38,18 +38,6 @@ async def requirements_node(state: GraphState) -> GraphState:
             metadata={"parsed_keys": list(parsed.keys()) if parsed else []},
         )
 
-        history = state.get("history", [])
-        reasoning = state.get("reasoning", [])
-        messages = state.get("messages", [])
-
-        history.append({
-            "node": "requirements_node",
-            "response": str(response)
-        })
-
-        reasoning.append("Requirements node executed")
-        messages.append("Requirements generation completed")
-
         if not parsed:
 
             log_event(
@@ -65,9 +53,6 @@ async def requirements_node(state: GraphState) -> GraphState:
             return {
                 **state,
                 "status": "retry",
-                "history": history,
-                "reasoning": reasoning,
-                "messages": messages,
             }
 
         raw_status = parsed.get("status", "invalid")
@@ -87,9 +72,6 @@ async def requirements_node(state: GraphState) -> GraphState:
             "requirements": parsed,    
             "ai_response": parsed,
             "status": normalized_status,
-            "history": history,
-            "reasoning": reasoning,
-            "messages": messages,
         }
 
     except Exception:
@@ -113,19 +95,7 @@ async def retry_node(state: GraphState) -> GraphState:
         message="Retry node started",
     )
 
-    history = state.get("history", [])
-    reasoning = state.get("reasoning", [])
-    messages = state.get("messages", [])
-
     retry_count = state.get("retry_count", 0) + 1
-
-    history.append({
-        "node": "retry_node",
-        "attempt": retry_count
-    })
-
-    reasoning.append("Retrying requirements generation")
-    messages.append(f"Retry attempt {retry_count}")
 
     log_event(
         level="INFO",
@@ -138,7 +108,4 @@ async def retry_node(state: GraphState) -> GraphState:
     return {
         **state,
         "retry_count": retry_count,
-        "history": history,
-        "reasoning": reasoning,
-        "messages": messages,
     }

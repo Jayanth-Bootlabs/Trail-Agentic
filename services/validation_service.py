@@ -41,10 +41,6 @@ async def validate_prompt_request(payload, user):
         result = await graph.ainvoke(
             {
                 "user_input": user_input,
-                "history": [],
-                "attempts": 0,
-                "messages": [],
-                "reasoning": [],
                 "retry_count": 0
             },
             config=config
@@ -157,10 +153,6 @@ async def continue_prompt_request(payload, user):
         result = await graph.ainvoke(
             {
                 "user_input": combined_input,
-                "history": [],
-                "attempts": 0,
-                "messages": [],
-                "reasoning": [],
                 "retry_count": 0
             },
             config=config

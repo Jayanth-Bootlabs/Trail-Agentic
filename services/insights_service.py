@@ -50,10 +50,6 @@ async def generate_insights_service(payload: GenerateInsightsRequest):
                 "requirements": requirement_record.user_input,
                 "code": code_record.code_json,
                 "test_code": tests_record.test_code,
-                "history": [],
-                "attempts": 0,
-                "messages": [],
-                "reasoning": [],
                 "retry_count": 0
             },
             config=config

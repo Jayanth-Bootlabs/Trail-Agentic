@@ -41,18 +41,6 @@ async def unit_test_node(state: GraphState) -> GraphState:
             },
         )
 
-        history = state.get("history", [])
-        reasoning = state.get("reasoning", [])
-        messages = state.get("messages", [])
-
-        history.append({
-            "node": "unit_test_node",
-            "response": str(response)
-        })
-
-        reasoning.append("Unit test node executed")
-        messages.append("Unit test generation completed")
-
         if not parsed:
 
             log_event(
@@ -68,9 +56,6 @@ async def unit_test_node(state: GraphState) -> GraphState:
             return {
                 **state,
                 "status": "retry",
-                "history": history,
-                "reasoning": reasoning,
-                "messages": messages,
             }
 
         raw_status = parsed.get("status", "invalid")
@@ -105,9 +90,6 @@ async def unit_test_node(state: GraphState) -> GraphState:
             "unit_tests": unit_tests_data,
             "ai_response": parsed,
             "status": normalized_status,
-            "history": history,
-            "reasoning": reasoning,
-            "messages": messages,
         }
 
     except Exception:
@@ -132,24 +114,7 @@ async def retry_node(state: GraphState) -> GraphState:
         message="Retry node started",
     )
 
-    history = state.get("history", [])
-    reasoning = state.get("reasoning", [])
-    messages = state.get("messages", [])
-
     retry_count = state.get("retry_count", 0) + 1
-
-    history.append({
-        "node": "retry_node",
-        "attempt": retry_count
-    })
-
-    reasoning.append(
-        "Retrying unit test generation"
-    )
-
-    messages.append(
-        f"Retry attempt {retry_count}"
-    )
 
     log_event(
         level="INFO",
@@ -164,7 +129,4 @@ async def retry_node(state: GraphState) -> GraphState:
     return {
         **state,
         "retry_count": retry_count,
-        "history": history,
-        "reasoning": reasoning,
-        "messages": messages,
     }

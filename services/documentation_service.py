@@ -67,10 +67,6 @@ async def generate_documentation_service(payload: GenerateDocumentationRequest):
                 "requirements": requirements_input,
                 "code": code_for_prompt,
                 "test_code": tests_content,
-                "history": [],
-                "attempts": 0,
-                "messages": [],
-                "reasoning": [],
                 "retry_count": 0
             },
             config=config

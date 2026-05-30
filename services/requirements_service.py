@@ -51,11 +51,6 @@ async def start_requirements_request(payload: StartRequirementRequest, user):
         result = await graph.ainvoke(
             {
                 "user_input": user_input,
-                "user_name": user.name,
-                "history": [],
-                "attempts": 0,
-                "messages": [],
-                "reasoning": [],
                 "retry_count": 0
             },
             config=config

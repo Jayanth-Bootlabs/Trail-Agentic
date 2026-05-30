@@ -45,10 +45,6 @@ async def generate_unit_tests_service(payload: UnitTestRequest):
         result = await graph.ainvoke(
             {
                 "code": code_record.code_json,
-                "history": [],
-                "attempts": 0,
-                "messages": [],
-                "reasoning": [],
                 "retry_count": 0
             },
             config=config
