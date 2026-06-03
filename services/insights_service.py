@@ -23,6 +23,17 @@ async def generate_insights_service(payload: GenerateInsightsRequest):
             metadata={"unit_test_id": unit_test_id},
         )
 
+        existing_insight = await Insights.get_or_none(
+            tests_id=unit_test_id,
+            is_completed=True
+        )
+
+        if existing_insight:
+            raise HTTPException(
+                status_code=409,
+                detail="Insights already generated for this unit test id"
+            )
+
         tests_record = await UnitTests.filter(
             id=unit_test_id,
             is_completed=True
@@ -120,8 +131,11 @@ async def generate_insights_service(payload: GenerateInsightsRequest):
             metadata={"trace": traceback.format_exc()},
         )
 
-        raise HTTPException(status_code=500, detail="Internal server error")
-
+        raise HTTPException(
+            status_code=500,
+            detail="Internal server error"
+        )
+    
 
 async def get_insights_service(insights_id: int):
     try:

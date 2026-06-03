@@ -26,7 +26,21 @@ async def generate_unit_tests_service(payload: UnitTestRequest):
             },
         )
 
-        code_record = await GeneratedCode.get_or_none(id=code_id, is_completed=True)
+        existing_unit_test = await UnitTests.get_or_none(
+            code_id=code_id,
+            is_completed=True
+        )
+
+        if existing_unit_test:
+            raise HTTPException(
+                status_code=409,
+                detail="Unit tests already generated for this code id"
+            )
+
+        code_record = await GeneratedCode.get_or_none(
+            id=code_id,
+            is_completed=True
+        )
 
         if not code_record:
             raise HTTPException(
@@ -100,8 +114,8 @@ async def generate_unit_tests_service(payload: UnitTestRequest):
             status_code=500,
             detail="Internal server error"
         )
-
-
+    
+    
 async def get_unit_tests_service(unit_test_id: int):
     try:
         log_event(

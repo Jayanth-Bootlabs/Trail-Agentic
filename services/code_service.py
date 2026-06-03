@@ -34,6 +34,33 @@ async def generate_code_service(payload: CodeGenerationRequest):
                 detail="Requirement not found or not completed yet"
             )
 
+        
+
+        existing_code = await GeneratedCode.get_or_none(
+            requirement=requirement,
+            is_completed=True
+        )
+
+        if existing_code:
+
+            log_event(
+                level="WARNING",
+                service=SERVICE_NAME,
+                function="generate_code_service",
+                message="Code already generated for requirement",
+                metadata={
+                    "requirements_id": requirements_id,
+                    "code_id": existing_code.id
+                },
+            )
+
+            raise HTTPException(
+                status_code=409,
+                detail="Code already generated for this requirement id"
+            )
+
+         
+
         graph = build_code_graph()
 
         config = {
@@ -57,10 +84,13 @@ async def generate_code_service(payload: CodeGenerationRequest):
             service=SERVICE_NAME,
             function="generate_code_service",
             message="Code data from state",
-            metadata={"ai_keys": list(ai.keys()) if ai else []},
+            metadata={
+                "ai_keys": list(ai.keys()) if ai else []
+            },
         )
 
         source_code = ai.get("source_code", {})
+
         is_completed = (
             result.get("status") == "valid"
             and isinstance(source_code, dict)
@@ -93,7 +123,11 @@ async def generate_code_service(payload: CodeGenerationRequest):
             "file_structure": ai.get("file_structure", []),
             "source_code": source_code,
             "is_completed": is_completed,
-            "created_at": str(code_obj.created_at) if code_obj.created_at else None,
+            "created_at": (
+                str(code_obj.created_at)
+                if code_obj.created_at
+                else None
+            ),
             "status": result.get("status"),
         }
 
@@ -101,6 +135,7 @@ async def generate_code_service(payload: CodeGenerationRequest):
         raise
 
     except Exception:
+
         log_event(
             level="ERROR",
             service=SERVICE_NAME,
@@ -108,9 +143,11 @@ async def generate_code_service(payload: CodeGenerationRequest):
             message="Code generation failed",
             stack_trace=traceback.format_exc(),
         )
-        raise HTTPException(status_code=500, detail="Internal server error")
 
-
+        raise HTTPException(
+            status_code=500,
+            detail="Internal server error"
+        )
 async def get_generated_code_service(code_id: int):
     try:
         log_event(

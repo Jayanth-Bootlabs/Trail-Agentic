@@ -19,7 +19,7 @@ async def create_user_service(payload: CreateUserRequest):
         existing_user = await Users.filter(email=payload.email).first()
 
         if existing_user:
-            raise HTTPException(status_code=400, detail="User already exists")
+            raise HTTPException(status_code=409, detail="User already exists")
 
         hashed_password = hash_password(payload.password)
 

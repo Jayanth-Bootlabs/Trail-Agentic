@@ -1,3 +1,5 @@
+#poetry run streamlit run streamlit_app.py
+
 import json
 from typing import Optional, Dict, Any
 

@@ -23,6 +23,17 @@ async def generate_documentation_service(payload: GenerateDocumentationRequest):
             metadata={"insights_id": insights_id},
         )
 
+        existing_documentation = await Documentation.get_or_none(
+            insights_id=insights_id,
+            is_completed=True
+        )
+
+        if existing_documentation:
+            raise HTTPException(
+                status_code=409,
+                detail="Documentation already generated for this insights id"
+            )
+
         insights_record = await Insights.filter(
             id=insights_id,
             is_completed=True
@@ -35,23 +46,53 @@ async def generate_documentation_service(payload: GenerateDocumentationRequest):
             )
 
         tests_record = insights_record.tests
+
         if not tests_record:
-            raise HTTPException(status_code=404, detail="Unit tests not found")
+            raise HTTPException(
+                status_code=404,
+                detail="Unit tests not found"
+            )
 
         code_record = tests_record.code
+
         if not code_record:
-            raise HTTPException(status_code=404, detail="Generated code not found")
+            raise HTTPException(
+                status_code=404,
+                detail="Generated code not found"
+            )
 
         requirement_record = code_record.requirement
+
         if not requirement_record:
-            raise HTTPException(status_code=404, detail="Requirement session not found")
+            raise HTTPException(
+                status_code=404,
+                detail="Requirement session not found"
+            )
 
-        code_payload = getattr(code_record, "code_json", None)
+        code_payload = getattr(
+            code_record,
+            "code_json",
+            None
+        )
+
         if code_payload is None:
-            raise HTTPException(status_code=500, detail="Generated code payload is empty")
+            raise HTTPException(
+                status_code=500,
+                detail="Generated code payload is empty"
+            )
 
-        code_for_prompt = code_payload if isinstance(code_payload, dict) else str(code_payload)
-        tests_content = getattr(tests_record, "test_code", "") or ""
+        code_for_prompt = (
+            code_payload
+            if isinstance(code_payload, dict)
+            else str(code_payload)
+        )
+
+        tests_content = getattr(
+            tests_record,
+            "test_code",
+            ""
+        ) or ""
+
         requirements_input = requirement_record.user_input
 
         graph = build_documentation_graph()
@@ -136,8 +177,12 @@ async def generate_documentation_service(payload: GenerateDocumentationRequest):
             message="Documentation generation failed",
             metadata={"trace": traceback.format_exc()},
         )
-        raise HTTPException(status_code=500, detail="Internal server error")
 
+        raise HTTPException(
+            status_code=500,
+            detail="Internal server error"
+        )
+    
 
 async def get_documentation_service(documentation_id: int):
     try:
