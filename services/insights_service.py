@@ -7,6 +7,7 @@ from models.unit_tests_model import UnitTests
 from models.insights_model import Insights
 from utils.logger import log_event
 from utils.cache import get_redis
+from utils.metrics import CACHE_LOOKUPS
 
 SERVICE_NAME = "insights_service"
 
@@ -165,6 +166,7 @@ async def get_insights_service(insights_id: int):
                 message="Cache hit",
                 metadata={"insights_id": insights_id},
             )
+            CACHE_LOOKUPS.labels(service=SERVICE_NAME, result="hit").inc()
             return json.loads(cached)
 
         # cache miss — fetch from DB
@@ -199,6 +201,7 @@ async def get_insights_service(insights_id: int):
             message="Cache miss — stored in cache",
             metadata={"insights_id": insights_id},
         )
+        CACHE_LOOKUPS.labels(service=SERVICE_NAME, result="miss").inc()
 
         return result
 

@@ -13,6 +13,7 @@ EXCLUDED_PATHS = [
     "/create_users",
     "/login",
     "/health",
+    "/metrics",
 ]
 
 class UserTypeMiddleware(BaseHTTPMiddleware):

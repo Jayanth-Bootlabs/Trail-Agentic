@@ -6,11 +6,11 @@ from typing import Optional, Dict, Any
 import requests
 import streamlit as st
 
-BASE_URL = "http://localhost:8000"
+BASE_URL = "http://127.0.0.1:8000"
 
-# =========================================================
+ 
 # SESSION
-# =========================================================
+ 
 
 if "session" not in st.session_state:
     st.session_state.session = requests.Session()
@@ -18,9 +18,9 @@ if "session" not in st.session_state:
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 
-# =========================================================
+ 
 # API CALL
-# =========================================================
+ 
 
 def api_call(
     method: str,
@@ -29,6 +29,11 @@ def api_call(
     params: Optional[Dict] = None,
 ) -> Dict[str, Any]:
     url = f"{BASE_URL}{endpoint}"
+
+    user_email = st.session_state.get("user_email")
+
+    if user_email:
+        st.session_state.session.headers["Authorization"] = user_email
 
     try:
         if method.upper() == "GET":
@@ -71,9 +76,9 @@ def extract_data(response: dict) -> dict:
     return response
 
 
-# =========================================================
+ 
 # RENDER HELPERS
-# =========================================================
+ 
 
 def detect_language(filename: str):
     extension_map = {
@@ -202,9 +207,9 @@ def render_response(data: dict):
     render_generic_json(data)
 
 
-# =========================================================
+ 
 # LOGIN
-# =========================================================
+ 
 
 def login(email: str, password: str) -> bool:
     res = api_call(
@@ -224,9 +229,9 @@ def login(email: str, password: str) -> bool:
     return False
 
 
-# =========================================================
+ 
 # SIDEBAR
-# =========================================================
+ 
 
 with st.sidebar:
     st.header("🔐 Login")
@@ -265,19 +270,19 @@ if not st.session_state.get("logged_in"):
     st.stop()
 
 
-# =========================================================
+ 
 # MAIN APP
-# =========================================================
+ 
 
 st.title("🧪 Multi-Agent Testing UI")
 
-tab_agents, tab_users = st.tabs(
-    ["🤖 Agents", "👥 User Management"]
+tab_agents, tab_pipeline, tab_users = st.tabs(
+    ["🤖 Agents", "🚀 Pipeline Orchestrator", "👥 User Management"]
 )
 
-# =========================================================
+ 
 # AGENTS TAB
-# =========================================================
+ 
 
 with tab_agents:
     agent = st.radio(
@@ -654,9 +659,211 @@ with tab_agents:
                     st.json(data)
 
 
-# =========================================================
+ 
+# PIPELINE ORCHESTRATOR TAB
+ 
+
+STATUS_ICONS = {
+    "pending": "⏳",
+    "running": "🔄",
+    "completed": "✅",
+    "failed": "❌",
+    "awaiting_clarification": "❓",
+    "rejected": "🚫",
+}
+
+
+def fetch_pipeline_status(run_id: int) -> Optional[dict]:
+    res = api_call("GET", f"/pipeline/run/{run_id}")
+
+    if not res:
+        return None
+
+    return extract_data(res)
+
+
+def render_pipeline_status(data: dict):
+    if not data or not data.get("run_id"):
+        st.info("No pipeline run found. Start a pipeline above.")
+        return
+
+    status = data.get("status")
+    icon = STATUS_ICONS.get(status, "•")
+
+    col1, col2, col3 = st.columns(3)
+    col1.metric("Run ID", data.get("run_id"))
+    col2.metric("Status", f"{icon} {status}")
+    col3.metric("Updated", data.get("updated_at") or "-")
+
+    if data.get("user_input"):
+        st.markdown("**Input**")
+        st.write(data.get("user_input"))
+
+    st.markdown("**Stages**")
+
+    for step in data.get("steps", []):
+        step_status = step.get("status")
+        step_icon = STATUS_ICONS.get(step_status, "•")
+
+        title = (
+            f"{step_icon} {step.get('stage')} "
+            f"— {step_status}"
+        )
+
+        with st.expander(title, expanded=step_status == "failed"):
+            st.write(f"Attempt: {step.get('attempt')}")
+
+            if step.get("artifact_id") is not None:
+                st.write(
+                    f"Artifact ID: {step.get('artifact_id')}"
+                )
+
+            if step.get("started_at"):
+                st.write(f"Started: {step.get('started_at')}")
+
+            if step.get("finished_at"):
+                st.write(
+                    f"Finished: {step.get('finished_at')}"
+                )
+
+            if step.get("error"):
+                st.error(step.get("error"))
+
+    artifacts = data.get("artifacts") or {}
+    filled = {
+        k: v for k, v in artifacts.items()
+        if v is not None
+    }
+
+    if filled:
+        st.markdown("**Artifacts**")
+
+        cols = st.columns(len(filled))
+
+        for col, (name, value) in zip(cols, filled.items()):
+            col.metric(name, value)
+
+    # =====================================================
+    # CLARIFICATION
+    # =====================================================
+
+    run_id = data.get("run_id")
+
+    if data.get("awaiting_clarification"):
+        st.info(
+            data.get("clarification_question")
+            or "Clarification needed"
+        )
+
+        reply = st.text_area(
+            "Your reply",
+            key=f"pipeline_clarify_input_{run_id}"
+        )
+
+        if st.button(
+            "Send Clarification",
+            key=f"pipeline_clarify_btn_{run_id}"
+        ):
+            if not reply.strip():
+                st.warning("Enter a reply")
+            else:
+                res = api_call(
+                    "POST",
+                    f"/pipeline/run/{run_id}/clarify",
+                    {"user_reply": reply.strip()}
+                )
+
+                if res:
+                    st.success("Clarification sent")
+                    st.rerun()
+
+    # =====================================================
+    # FAILED → RESTART
+    # =====================================================
+
+    elif status == "failed":
+        st.error("Pipeline failed")
+
+        if st.button(
+            "Restart Pipeline",
+            key=f"pipeline_restart_btn_{run_id}"
+        ):
+            res = api_call(
+                "POST",
+                f"/pipeline/run/{run_id}/restart"
+            )
+
+            if res:
+                st.success("Pipeline restarted")
+                st.rerun()
+
+    elif status == "completed":
+        st.success("Pipeline completed")
+
+    elif status == "rejected":
+        st.warning("Request was rejected")
+
+
+@st.fragment(run_every=30)
+def live_pipeline_status(run_id: int):
+    data = fetch_pipeline_status(run_id)
+
+    if data:
+        render_pipeline_status(data)
+    else:
+        st.warning("Unable to fetch pipeline status")
+
+
+with tab_pipeline:
+    st.header("🚀 Pipeline Orchestrator")
+
+    pipeline_input = st.text_area(
+        "Describe the pipeline you want to generate",
+        key="pipeline_input"
+    )
+
+    col_start, col_run = st.columns([1, 1])
+
+    with col_start:
+        if st.button("Start Pipeline", type="primary"):
+            if not pipeline_input.strip():
+                st.warning("Enter a pipeline description")
+            else:
+                with st.spinner("Starting pipeline..."):
+                    res = api_call(
+                        "POST",
+                        "/pipeline/run",
+                        {"user_input": pipeline_input.strip()}
+                    )
+
+                if res:
+                    data = extract_data(res)
+                    run_id = data.get("run_id")
+
+                    if run_id:
+                        st.session_state.pipeline_run_id_input = run_id
+                        st.success(f"Pipeline started (run_id={run_id})")
+                        st.rerun()
+
+    with col_run:
+        if "pipeline_run_id_input" not in st.session_state:
+            st.session_state.pipeline_run_id_input = 1
+
+        run_id = st.number_input(
+            "Run ID",
+            min_value=1,
+            step=1,
+            key="pipeline_run_id_input"
+        )
+
+    st.markdown("---")
+
+    live_pipeline_status(run_id)
+
+
+ 
 # USER MANAGEMENT TAB
-# =========================================================
+ 
 
 with tab_users:
     st.header("👥 User Management")

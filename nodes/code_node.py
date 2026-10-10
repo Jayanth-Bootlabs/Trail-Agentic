@@ -1,7 +1,7 @@
 import traceback
 from graph.state import GraphState
 from prompts.code_prompt import get_code_prompt
-from utils.gemini_llm import llm
+from utils.model_router import llm
 from utils.logger import log_event
 from utils.helper import clean_ai_response
 
@@ -25,7 +25,9 @@ async def code_node(state: GraphState) -> GraphState:
             state["user_input"]
         )
 
-        response = await llm.generate(prompt)
+        response = await llm.generate_for_node(
+            prompt, "code_node", request_context=state["user_input"]
+        )
         parsed = clean_ai_response(response)
 
         log_event(

@@ -1,7 +1,7 @@
 import traceback
 from graph.state import GraphState
 from prompts.unit_test_prompt import get_unit_tests_prompt
-from utils.gemini_llm import llm
+from utils.model_router import llm
 from utils.logger import log_event
 from utils.helper import clean_ai_response
 
@@ -27,7 +27,9 @@ async def unit_test_node(state: GraphState) -> GraphState:
             state["code"]
         )
 
-        response = await llm.generate(prompt)
+        response = await llm.generate_for_node(
+            prompt, "unit_test_node", request_context=state["code"]
+        )
 
         parsed = clean_ai_response(response)
 

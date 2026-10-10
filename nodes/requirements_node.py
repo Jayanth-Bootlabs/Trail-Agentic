@@ -1,7 +1,7 @@
 import traceback
 from graph.state import GraphState
 from prompts.requirements_prompt import get_requirements_prompt
-from utils.gemini_llm import llm
+from utils.model_router import llm
 from utils.logger import log_event
 from utils.helper import clean_ai_response
 
@@ -27,7 +27,9 @@ async def requirements_node(state: GraphState) -> GraphState:
             user_name=state.get("user_name", "General User"),
         )
 
-        response = await llm.generate(prompt)
+        response = await llm.generate_for_node(
+            prompt, "requirements_node", request_context=state["user_input"]
+        )
         parsed = clean_ai_response(response)
 
         log_event(

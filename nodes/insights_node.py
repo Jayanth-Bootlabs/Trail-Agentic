@@ -1,7 +1,7 @@
 import traceback
 from graph.state import GraphState
 from prompts.insights_prompt import get_insights_prompt
-from utils.gemini_llm import llm
+from utils.model_router import llm
 from utils.logger import log_event
 from utils.helper import clean_ai_response
 
@@ -29,7 +29,15 @@ async def insights_node(state: GraphState) -> GraphState:
             state["test_code"],
         )
 
-        response = await llm.generate(prompt)
+        response = await llm.generate_for_node(
+            prompt,
+            "insights_node",
+            request_context={
+                "requirements": state["requirements"],
+                "code": state["code"],
+                "test_code": state["test_code"],
+            },
+        )
         parsed = clean_ai_response(response)
 
         if not parsed:

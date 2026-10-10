@@ -177,6 +177,7 @@ cython_debug/
 .pypirc
 .DS_Store
 models/.DS_Store
+logs/*.jsonl*
 
 #race test :
 race.py

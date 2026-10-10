@@ -7,6 +7,7 @@ from models.requirements_model import RequirementSession
 from models.code_model import GeneratedCode
 from utils.logger import log_event
 from utils.cache import get_redis
+from utils.metrics import CACHE_LOOKUPS
 
 SERVICE_NAME = "code_generation_service"
 
@@ -177,6 +178,7 @@ async def get_generated_code_service(code_id: int):
                 message="Cache hit",
                 metadata={"code_id": code_id},
             )
+            CACHE_LOOKUPS.labels(service=SERVICE_NAME, result="hit").inc()
             return json.loads(cached)
 
         # cache miss — fetch from DB
@@ -208,6 +210,7 @@ async def get_generated_code_service(code_id: int):
             message="Cache miss — stored in cache",
             metadata={"code_id": code_id},
         )
+        CACHE_LOOKUPS.labels(service=SERVICE_NAME, result="miss").inc()
 
         return result
 

@@ -38,6 +38,7 @@ def init_db(app):
                 "models.documentation_model",
                 "models.code_model",
                 "models.requirements_model",
+                "models.pipeline_run_model",
             ]
         },
         generate_schemas=True,

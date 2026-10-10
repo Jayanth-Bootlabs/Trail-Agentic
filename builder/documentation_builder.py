@@ -4,14 +4,15 @@ from graph.state import GraphState
 from nodes.documentation_node import documentation_node,retry_node
 from graph.transition import documentation_transition,retry_transition
 from graph.checkpoint import memory
+from utils.logger import trace_graph_node
 
 
 def build_documentation_graph():
 
     graph = StateGraph(GraphState)
 
-    graph.add_node("documentation", documentation_node)
-    graph.add_node("retry_node", retry_node)
+    graph.add_node("documentation", trace_graph_node("documentation", documentation_node))
+    graph.add_node("retry_node", trace_graph_node("retry_node", retry_node))
 
     graph.set_entry_point("documentation")
 

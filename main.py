@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from prometheus_fastapi_instrumentator import Instrumentator
 from starlette.middleware.sessions import SessionMiddleware
 
 from middleware.middleware import UserTypeMiddleware
@@ -17,6 +18,7 @@ from routes import (
     insights_routes,
     documentation_routes,
     requirements_routes,
+    orchestrator_routes,
 )
 
 load_dotenv(override=True)
@@ -53,6 +55,16 @@ app.add_middleware(
     allow_headers=["Authorization", "Content-Type"],
 )
 
+Instrumentator(
+    excluded_handlers=[
+        "/metrics",
+        "/health",
+        "/docs",
+        "/redoc",
+        "/openapi.json",
+    ],
+).instrument(app).expose(app)
+
 init_db(app)
 
 
@@ -68,3 +80,4 @@ app.include_router(code_routes.router)
 app.include_router(unit_test_routes.router)
 app.include_router(insights_routes.router)
 app.include_router(documentation_routes.router)
+app.include_router(orchestrator_routes.router)
